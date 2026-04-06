@@ -74,7 +74,6 @@ def create(db: Session, data: ResearcherCreate) -> Researcher:
         status=data.status,
         group_id=group_id,
         orientador_id=data.orientador_id,
-        observacoes=data.observacoes,
     )
     db.add(researcher)
     db.flush()  # gera researcher.id antes de criar o User

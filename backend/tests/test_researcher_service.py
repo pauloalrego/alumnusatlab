@@ -162,10 +162,6 @@ class TestUpdate:
         updated = researcher_service.update(db, r, ResearcherUpdate(status="doutorado"))
         assert updated.status == "doutorado"
 
-    def test_updates_observacoes(self, db):
-        r = researcher_service.create(db, ResearcherCreate(email="obs@univ.br", nome="Obs", status="mestrado"))
-        updated = researcher_service.update(db, r, ResearcherUpdate(observacoes="Nota importante"))
-        assert updated.observacoes == "Nota importante"
 
 
 class TestDeactivate:

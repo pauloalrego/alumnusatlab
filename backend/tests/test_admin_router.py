@@ -314,7 +314,8 @@ class TestUpdateUser:
         resp = client.put(f"/api/admin/users/{student.id}", json={"role": "professor"})
         assert resp.status_code == 200
         db.refresh(student)
-        assert student.plan_type == "trial"
+        assert student.plan is not None
+        assert student.plan.plan_type == "trial"
 
     def test_demotion_to_researcher_clears_plan(self, superadmin_client):
         client, sa, db = superadmin_client
@@ -329,7 +330,7 @@ class TestUpdateUser:
         resp = client.put(f"/api/admin/users/{prof.id}", json={"role": "researcher"})
         assert resp.status_code == 200
         db.refresh(prof)
-        assert prof.plan_type is None
+        assert prof.plan is None or prof.plan.plan_type is None
 
     def test_is_admin_set_for_superadmin_role(self, superadmin_client):
         client, sa, db = superadmin_client

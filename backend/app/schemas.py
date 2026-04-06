@@ -90,7 +90,6 @@ class ResearcherCreate(BaseModel):
     status: str
     orientador_id: Optional[int] = None  # FK → professors.id
     group_id: Optional[int] = None
-    observacoes: Optional[str] = None
     institution_id: Optional[int] = None
 
     @field_validator("email")
@@ -115,7 +114,6 @@ class ResearcherUpdate(BaseModel):
     status: Optional[str] = None
     orientador_id: Optional[int] = None  # FK → professors.id
     group_id: Optional[int] = None
-    observacoes: Optional[str] = None
     ativo: Optional[bool] = None
     matricula: Optional[str] = None
     curso: Optional[str] = None
@@ -130,7 +128,6 @@ class ResearcherOut(BaseModel):
     group_id: Optional[int] = None
     orientador_id: Optional[int] = None
     orientador_nome: Optional[str] = None
-    observacoes: Optional[str]
     ativo: bool
     registered: bool
     matricula: Optional[str]

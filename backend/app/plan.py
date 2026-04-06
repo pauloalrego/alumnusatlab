@@ -37,46 +37,50 @@ def is_plan_user(user: User) -> bool:
 
 
 def clear_plan(user: User) -> None:
-    user.plan_type = None
-    user.plan_status = None
-    user.account_activated_at = None
-    user.plan_period_ends_at = None
+    if user.plan is not None:
+        user.plan.plan_type = None
+        user.plan.plan_status = None
+        user.plan.account_activated_at = None
+        user.plan.plan_period_ends_at = None
 
 
 def ensure_professor_plan_defaults(user: User) -> bool:
     """Garante trial padrão para professor/superadmin sem plano (ex.: migração ou promoção de papel)."""
+    from .models import UserPlan
     if not is_plan_user(user):
         return False
-    if user.plan_type is not None:
+    if user.plan is not None and user.plan.plan_type is not None:
         return False
     now = datetime.utcnow()
-    user.plan_type = PLAN_TRIAL
-    user.plan_status = STATUS_ACTIVE
-    user.account_activated_at = now
-    user.plan_period_ends_at = trial_period_end(now)
+    if user.plan is None:
+        user.plan = UserPlan(user_id=user.id)
+    user.plan.plan_type = PLAN_TRIAL
+    user.plan.plan_status = STATUS_ACTIVE
+    user.plan.account_activated_at = now
+    user.plan.plan_period_ends_at = trial_period_end(now)
     return True
 
 
 def refresh_user_plan_status(db: Session, user: User) -> None:
     """Atualiza plan_status conforme plan_period_ends_at (quando definido)."""
-    if not is_plan_user(user) or user.plan_period_ends_at is None:
+    if not is_plan_user(user) or user.plan is None or user.plan.plan_period_ends_at is None:
         return
     now = now_naive_utc()
-    end = _to_naive_utc(user.plan_period_ends_at)
+    end = _to_naive_utc(user.plan.plan_period_ends_at)
     want = STATUS_EXPIRED if now >= end else STATUS_ACTIVE
-    if user.plan_status != want:
-        user.plan_status = want
+    if user.plan.plan_status != want:
+        user.plan.plan_status = want
         db.commit()
 
 
 def compute_trial_days_remaining(user: User) -> int | None:
     """Dias restantes do trial (0 se vencido); None se não for professor em trial."""
-    if not is_plan_user(user) or user.plan_type != PLAN_TRIAL:
+    if not is_plan_user(user) or user.plan is None or user.plan.plan_type != PLAN_TRIAL:
         return None
-    if user.plan_period_ends_at is None:
+    if user.plan.plan_period_ends_at is None:
         return None
     today = date.today()
-    end_d = _to_naive_utc(user.plan_period_ends_at).date()
+    end_d = _to_naive_utc(user.plan.plan_period_ends_at).date()
     return max(0, (end_d - today).days)
 
 
@@ -144,10 +148,10 @@ def user_to_out(user: User) -> "UserOut":
         researcher_id=user.researcher_id,
         last_login=user.last_login,
         created_at=user.created_at,
-        plan_type=user.plan_type,
-        plan_status=user.plan_status,
-        account_activated_at=user.account_activated_at,
-        plan_period_ends_at=user.plan_period_ends_at,
+        plan_type=user.plan.plan_type if user.plan else None,
+        plan_status=user.plan.plan_status if user.plan else None,
+        account_activated_at=user.plan.account_activated_at if user.plan else None,
+        plan_period_ends_at=user.plan.plan_period_ends_at if user.plan else None,
         trial_days_remaining=compute_trial_days_remaining(user),
         **_profile,
     )

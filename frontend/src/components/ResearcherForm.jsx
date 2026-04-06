@@ -3,7 +3,7 @@ import { createResearcher, updateResearcher } from '../api';
 import Toast from './Toast';
 import { modKey, isModEnter } from '../platform';
 
-const EMPTY = { nome: '', status: 'graduacao', email: '', observacoes: '', orientador_id: '', matricula: '', curso: '', enrollment_date: '', institution_id: '' };
+const EMPTY = { nome: '', status: 'graduacao', email: '', orientador_id: '', matricula: '', curso: '', enrollment_date: '', institution_id: '' };
 
 export default function ResearcherForm({ researcher, professors = [], institutions = [], onSaved, onCancel }) {
   const [form, setForm] = useState(EMPTY);
@@ -15,7 +15,6 @@ export default function ResearcherForm({ researcher, professors = [], institutio
         nome: researcher.nome || '',
         status: researcher.status || 'graduacao',
         email: researcher.email || '',
-        observacoes: researcher.observacoes || '',
         orientador_id: researcher.orientador_id || '',
         matricula: researcher.matricula || '',
         curso: researcher.curso || '',
@@ -104,8 +103,6 @@ export default function ResearcherForm({ researcher, professors = [], institutio
           onChange={set('enrollment_date')}
         />
       </div>
-
-      <textarea className="w-full border rounded px-3 py-2 text-sm" placeholder="Observações" rows={2} value={form.observacoes} onChange={set('observacoes')} onKeyDown={e => isModEnter(e) && handleSubmit(e)} />
 
       <div className="flex gap-2">
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
