@@ -12,6 +12,7 @@ import InstitutionPage from './pages/InstitutionPage';
 import AuthPage from './pages/AuthPage';
 import LandingPage from './pages/LandingPage';
 import ReadingsPage from './pages/ReadingsPage';
+import PlanPage from './pages/PlanPage';
 
 
 export default function App() {
@@ -68,6 +69,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DeadlinesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="plan"
+          element={
+            <ProtectedRoute>
+              <PlanPage />
             </ProtectedRoute>
           }
         />

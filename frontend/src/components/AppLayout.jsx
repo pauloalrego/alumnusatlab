@@ -82,6 +82,12 @@ function AppPageHeadingIcon({ name }) {
         </svg>
       );
     }
+    case 'plan':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -419,6 +425,7 @@ export default function AppLayout() {
     if (p === '/app/reminders') return { title: 'Lembretes', icon: 'reminders' };
     if (p === '/app/deadlines') return { title: 'Próximos deadlines', icon: 'deadlines' };
     if (p === '/app/admin') return { title: 'Dashboard', icon: 'admin' };
+    if (p === '/app/plan') return { title: 'Meu Plano', icon: 'plan' };
     return null;
   }, [pathname]);
 
@@ -569,6 +576,11 @@ export default function AppLayout() {
                 <span className="font-medium text-gray-600">{firstName}</span>
               )}
             </span>
+            {currentUser?.plan_type === 'trial' && currentUser?.role === 'professor' && (
+              <Link to="/app/plan" className="text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-600 px-2 py-0.5 rounded-full border border-red-200 hover:bg-red-200 transition-colors">
+                Trial
+              </Link>
+            )}
             {/* Configurações */}
             <div className="relative" ref={settingsRef}>
               <button
@@ -621,6 +633,18 @@ export default function AppLayout() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       Meu perfil
+                    </button>
+                  )}
+                  {payload?.role === 'professor' && (
+                    <button
+                      type="button"
+                      onClick={() => { setSettingsOpen(false); navigate('/app/plan'); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      Plano
                     </button>
                   )}
                   <div className="border-t mx-2 my-1" />
