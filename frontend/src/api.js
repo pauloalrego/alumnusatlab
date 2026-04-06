@@ -175,6 +175,7 @@ export const updateUserRole = (id, role) => request(`/admin/users/${id}`, { meth
 export const deleteUser = (id) => request(`/admin/users/${id}`, { method: 'DELETE' });
 export const deletePendingResearcher = (id) => request(`/admin/researchers/${id}`, { method: 'DELETE' });
 export const bulkDeleteUsers = (user_ids, researcher_ids) => request('/admin/bulk-delete', { method: 'POST', body: JSON.stringify({ user_ids, researcher_ids }) });
+export const inviteProfessor = (data) => request('/admin/invite-professor', { method: 'POST', body: JSON.stringify(data) });
 
 // Milestones
 export const getMilestones      = (userId) => request(`/users/${userId}/milestones/`);

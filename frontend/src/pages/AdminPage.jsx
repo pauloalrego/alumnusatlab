@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, deletePendingResearcher, bulkDeleteUsers, createResearcher } from '../api';
+import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, deletePendingResearcher, bulkDeleteUsers, createResearcher, inviteProfessor } from '../api';
 import { keys } from '../queryKeys';
 import { getTokenPayload } from '../auth';
 import { useAppLayout } from '../components/AppLayout';
 import Toast from '../components/Toast';
 import { useConfirm } from '../components/ConfirmModal';
+import { isPublicEmailDomain, INSTITUTIONAL_EMAIL_ERROR_PT } from '../institutionalEmail';
 
 const ROLE_LABELS = { superadmin: 'Superadmin', professor: 'Professor', researcher: 'Aluno' };
 const STATUS_LABELS = { graduacao: 'Graduação', mestrado: 'Mestrado', doutorado: 'Doutorado', postdoc: 'Pós-doc', professor: 'Professor' };
@@ -110,6 +111,7 @@ export default function AdminPage() {
   const [newStudentEmail, setNewStudentEmail] = useState('');
   const [newStudentStatus, setNewStudentStatus] = useState('mestrado');
   const [newStudentInstId, setNewStudentInstId] = useState('');
+  const [newUserRole, setNewUserRole] = useState('researcher');
   const [addingStudent, setAddingStudent] = useState(false);
   const [addStudentError, setAddStudentError] = useState('');
   const [inviteLink, setInviteLink] = useState('');
@@ -183,11 +185,13 @@ export default function AdminPage() {
 
   async function handleDelete(u) {
     if (!await confirm({ title: `Remover "${u.nome}"?`, description: 'Esta ação não pode ser desfeita.', confirmLabel: 'Remover', variant: 'danger' })) return;
-    if (u.pending) {
+    if (u.pending && u.researcher_id) {
       await deletePendingResearcher(u.researcher_id);
     } else {
       await deleteUser(u.id);
     }
+    setInviteLink('');
+    setShowAddStudent(false);
     setToast(`"${u.nome}" removido`);
     invalidateAdmin();
   }
@@ -195,12 +199,21 @@ export default function AdminPage() {
   async function handleAddStudent(e) {
     e.preventDefault();
     if (!newStudentNome.trim() || !newStudentEmail.trim()) return;
+    if (newUserRole === 'professor' && isPublicEmailDomain(newStudentEmail)) {
+      setAddStudentError(INSTITUTIONAL_EMAIL_ERROR_PT);
+      return;
+    }
     setAddingStudent(true);
     setAddStudentError('');
     try {
-      const myPayload = getTokenPayload();
       const instId = newStudentInstId ? Number(newStudentInstId) : null;
-      const r = await createResearcher({ nome: newStudentNome.trim(), email: newStudentEmail.trim(), status: newStudentStatus, orientador_id: myPayload?.professor_id || null, institution_id: instId });
+      let r;
+      if (newUserRole === 'professor') {
+        r = await inviteProfessor({ nome: newStudentNome.trim(), email: newStudentEmail.trim(), institution_id: instId });
+      } else {
+        const myPayload = getTokenPayload();
+        r = await createResearcher({ nome: newStudentNome.trim(), email: newStudentEmail.trim(), status: newStudentStatus, orientador_id: myPayload?.professor_id || null, institution_id: instId });
+      }
       if (r?.id) {
         const token = btoa(newStudentEmail.trim());
         const url = `${window.location.origin}/entrar?tab=cadastro&token=${token}`;
@@ -208,14 +221,15 @@ export default function AdminPage() {
         setNewStudentNome('');
         setNewStudentEmail('');
         setNewStudentStatus('mestrado');
+        setNewUserRole('researcher');
         setNewStudentInstId(institutions.length > 0 ? String(institutions[0].id) : '');
         invalidateAdmin();
         loadData?.();
       } else {
-        setAddStudentError(r?.detail || 'Erro ao cadastrar aluno');
+        setAddStudentError(r?.detail || 'Erro ao cadastrar usuário');
       }
     } catch {
-      setAddStudentError('Erro ao cadastrar aluno');
+      setAddStudentError('Erro ao cadastrar usuário');
     } finally {
       setAddingStudent(false);
     }
@@ -290,7 +304,7 @@ export default function AdminPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Cadastrar Aluno
+                  Cadastrar Usuário
                 </button>
               )}
               {canDelete && selected.size > 0 && (
@@ -326,7 +340,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <form onSubmit={handleAddStudent} className="space-y-3">
-                  <p className="text-sm font-semibold text-gray-700">Cadastrar novo aluno</p>
+                  <p className="text-sm font-semibold text-gray-700">Cadastrar novo usuário</p>
                   <div className="flex gap-3 flex-wrap">
                     <input
                       required
@@ -344,15 +358,25 @@ export default function AdminPage() {
                       className="flex-1 min-w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                     />
                     <select
-                      value={newStudentStatus}
-                      onChange={e => setNewStudentStatus(e.target.value)}
+                      value={newUserRole}
+                      onChange={e => setNewUserRole(e.target.value)}
                       className="border rounded-lg px-3 py-2 text-sm"
                     >
-                      <option value="graduacao">Graduação</option>
-                      <option value="mestrado">Mestrado</option>
-                      <option value="doutorado">Doutorado</option>
-                      <option value="postdoc">Pós-doc</option>
+                      <option value="researcher">Aluno</option>
+                      <option value="professor">Professor</option>
                     </select>
+                    {newUserRole === 'researcher' && (
+                      <select
+                        value={newStudentStatus}
+                        onChange={e => setNewStudentStatus(e.target.value)}
+                        className="border rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option value="graduacao">Graduação</option>
+                        <option value="mestrado">Mestrado</option>
+                        <option value="doutorado">Doutorado</option>
+                        <option value="postdoc">Pós-doc</option>
+                      </select>
+                    )}
                     {institutions.length === 1 ? (
                       <span className="flex items-center px-3 py-2 text-sm text-gray-600 border rounded-lg bg-gray-50">
                         {institutions[0].name}

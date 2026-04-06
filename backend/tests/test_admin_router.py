@@ -581,6 +581,156 @@ class TestCountGroups:
         assert _count_groups(db, acting) == 0
 
 
+# ---------------------------------------------------------------------------
+# POST /admin/invite-professor
+# ---------------------------------------------------------------------------
+
+class TestInviteProfessor:
+    def test_creates_user_and_professor(self, superadmin_client):
+        client, sa, db = superadmin_client
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Novo Prof",
+            "email": "novoprof@univ.edu.br",
+        })
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["role"] == "professor"
+        assert data["email"] == "novoprof@univ.edu.br"
+
+        # Verifica User criado
+        user = db.query(User).filter(User.id == data["id"]).first()
+        assert user is not None
+        assert user.role == "professor"
+        assert user.password_hash is None  # conta pendente
+
+        # Verifica Professor vinculado
+        assert user.professor_id is not None
+        prof = db.query(Professor).filter(Professor.id == user.professor_id).first()
+        assert prof is not None
+
+    def test_creates_trial_plan(self, superadmin_client):
+        client, sa, db = superadmin_client
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Prof Trial",
+            "email": "proftrial@univ.edu.br",
+        })
+        assert resp.status_code == 201
+        from app.models import UserPlan
+        user_id = resp.json()["id"]
+        plan = db.query(UserPlan).filter(UserPlan.user_id == user_id).first()
+        assert plan is not None
+        assert plan.plan_type == "trial"
+        assert plan.plan_status == "active"
+        assert plan.account_activated_at is not None
+        assert plan.plan_period_ends_at is not None
+
+    def test_links_institution(self, superadmin_client):
+        client, sa, db = superadmin_client
+        inst = Institution(name="Inst Prof", domain="instprof.edu.br")
+        db.add(inst)
+        db.commit()
+
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Prof Inst",
+            "email": "profinst@instprof.edu.br",
+            "institution_id": inst.id,
+        })
+        assert resp.status_code == 201
+        user = db.query(User).filter(User.id == resp.json()["id"]).first()
+        pi = db.query(ProfessorInstitution).filter(
+            ProfessorInstitution.professor_id == user.professor_id
+        ).first()
+        assert pi is not None
+        assert pi.institution_id == inst.id
+
+    def test_duplicate_email_returns_409(self, superadmin_client):
+        client, sa, db = superadmin_client
+        make_user(db, email="dup@univ.edu.br", role="researcher")
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Dup Prof",
+            "email": "dup@univ.edu.br",
+        })
+        assert resp.status_code == 409
+
+    def test_professor_can_invite(self, professor_client):
+        client, prof, db = professor_client
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Convidado",
+            "email": "convidado@univ.edu.br",
+        })
+        assert resp.status_code == 201
+
+    def test_creates_entrada_milestone(self, superadmin_client):
+        client, sa, db = superadmin_client
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Prof Marco",
+            "email": "profmarco@univ.edu.br",
+        })
+        assert resp.status_code == 201
+        from app.models import Milestone
+        user_id = resp.json()["id"]
+        m = db.query(Milestone).filter(
+            Milestone.user_id == user_id,
+            Milestone.type == "entrada",
+        ).first()
+        assert m is not None
+        assert m.title == "Entrada no Alumnus"
+        assert m.created_by_id == user_id
+
+    def test_rejects_public_email(self, superadmin_client):
+        client, sa, db = superadmin_client
+        for email in ["prof@gmail.com", "prof@hotmail.com", "prof@outlook.com", "prof@yahoo.com.br", "prof@uol.com.br"]:
+            resp = client.post("/api/admin/invite-professor", json={
+                "nome": "Prof Publico",
+                "email": email,
+            })
+            assert resp.status_code == 400, f"Expected 400 for {email}, got {resp.status_code}"
+            assert "institucional" in resp.json()["detail"].lower()
+
+    def test_accepts_institutional_email(self, superadmin_client):
+        client, sa, db = superadmin_client
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Prof Institucional",
+            "email": "prof@ufpa.br",
+        })
+        assert resp.status_code == 201
+
+    def test_inherits_institution_from_inviting_professor(self, professor_client):
+        client, acting_user, db = professor_client
+
+        # Cria professor + instituição para o professor que convida
+        prof = Professor()
+        db.add(prof)
+        db.flush()
+        acting_user.professor_id = prof.id
+
+        inst = Institution(name="Origem Inst", domain="origem.edu.br")
+        db.add(inst)
+        db.flush()
+        db.add(ProfessorInstitution(
+            professor_id=prof.id,
+            institution_id=inst.id,
+            institutional_email="prof@origem.edu.br",
+        ))
+        db.commit()
+        db.refresh(acting_user)
+
+        # Convida sem informar institution_id
+        resp = client.post("/api/admin/invite-professor", json={
+            "nome": "Novo Prof Herdado",
+            "email": "herdado@origem.edu.br",
+        })
+        assert resp.status_code == 201
+
+        # Verifica que o novo professor herdou a instituição
+        new_user = db.query(User).filter(User.id == resp.json()["id"]).first()
+        new_pi = db.query(ProfessorInstitution).filter(
+            ProfessorInstitution.professor_id == new_user.professor_id
+        ).first()
+        assert new_pi is not None
+        assert new_pi.institution_id == inst.id
+
+
 class TestListUsersViaGroupInstitution:
     """Professor vinculado por professor_groups vê usuários da mesma instituição."""
 
