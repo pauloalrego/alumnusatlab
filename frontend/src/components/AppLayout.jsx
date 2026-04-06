@@ -221,7 +221,6 @@ export default function AppLayout() {
         matricula: null,
         curso: null,
         enrollment_date: null,
-        observacoes: null,
       }));
     setResearchers([...professorEntries, ...(researchersData || [])]);
     setNodes(

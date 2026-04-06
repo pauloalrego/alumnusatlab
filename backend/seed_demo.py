@@ -73,34 +73,29 @@ def run():
                  github_url='https://github.com/diegoalmeida',
                  whatsapp='91991220001',
                  interesses='Computação em Nuvem, Kubernetes, Microsserviços',
-                 observacoes='Bolsista CAPES. Pesquisa sobre orquestração de contêineres.',
                  photo_url='https://i.pravatar.cc/300?img=12'),
             dict(nome='Beatriz Tavares Leal',   status='mestrado',  email='beatriz.tavares@ufpa.br',
                  matricula='202201020', curso='Ciência da Computação', enrollment_date=date(2022,3,1),
                  github_url='https://github.com/btavares',
                  whatsapp='91991220002',
                  interesses='Segurança de Redes, Criptografia, Zero Trust',
-                 observacoes='Pesquisa em segurança de APIs distribuídas.',
                  photo_url='https://i.pravatar.cc/300?img=44'),
             dict(nome='Renato Vieira Cunha',    status='mestrado',  email='renato.vieira@ufpa.br',
                  matricula='202201025', curso='Sistemas de Informação', enrollment_date=date(2022,8,1),
                  github_url='https://github.com/rvieira',
                  whatsapp='91991220003',
                  interesses='DevOps, CI/CD, Infraestrutura como Código',
-                 observacoes='Projeta pipelines de implantação contínua.',
                  photo_url='https://i.pravatar.cc/300?img=52'),
             dict(nome='Isabela Rocha Pimentel', status='graduacao', email='isabela.rocha@ufpa.br',
                  matricula='202301030', curso='Engenharia da Computação', enrollment_date=date(2023,3,1),
                  whatsapp='91991220004',
                  interesses='Cloud Functions, Serverless, AWS',
-                 observacoes='IC sobre arquitetura serverless na AWS.',
                  photo_url='https://i.pravatar.cc/300?img=39'),
             dict(nome='Gabriel Neto Barbosa',   status='graduacao', email='gabriel.neto@ufpa.br',
                  matricula='202301035', curso='Ciência da Computação', enrollment_date=date(2023,8,1),
                  github_url='https://github.com/gabrielneto',
                  whatsapp='91991220005',
                  interesses='Monitoramento de sistemas, Observabilidade, Prometheus',
-                 observacoes='TCC sobre observabilidade em microsserviços.',
                  photo_url='https://i.pravatar.cc/300?img=61'),
         ]
         for s in marina_students:
@@ -112,19 +107,26 @@ def run():
         # ── Users ──────────────────────────────────────────────────────────
         def ensure_user(email, nome, role, professor_id=None, researcher_id=None, pw='alumnus123'):
             if not db.query(User).filter_by(email=email).first():
+                from app.models import UserPlan
                 now = datetime.utcnow()
-                db.add(User(
+                u = User(
                     email=email, nome=nome, password_hash=h(pw),
                     role=role,
                     professor_id=professor_id,
                     researcher_id=researcher_id,
                     last_login=now - timedelta(days=1),
                     created_at=now,
-                    plan_type='trial' if role == 'professor' else None,
-                    plan_status='active' if role == 'professor' else None,
-                    account_activated_at=now - timedelta(days=5) if role == 'professor' else None,
-                    plan_period_ends_at=now + timedelta(days=25) if role == 'professor' else None,
-                ))
+                )
+                db.add(u)
+                db.flush()
+                if role == 'professor':
+                    db.add(UserPlan(
+                        user_id=u.id,
+                        plan_type='trial',
+                        plan_status='active',
+                        account_activated_at=now - timedelta(days=5),
+                        plan_period_ends_at=now + timedelta(days=25),
+                    ))
 
         ensure_user('marina.santos@ufpa.br', 'Marina Santos', 'professor', professor_id=prof2_pid)
 
