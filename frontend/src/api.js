@@ -18,7 +18,15 @@ async function request(path, options = {}) {
     return;
   }
   if (res.status === 204 || res.status === 205) return null;
-  if (options.method === 'DELETE') return null;
+  if (options.method === 'DELETE') {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const err = new Error(body.detail || 'Erro na requisição');
+      err.status = res.status;
+      throw err;
+    }
+    return null;
+  }
   return res.json();
 }
 

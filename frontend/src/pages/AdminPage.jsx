@@ -172,7 +172,10 @@ export default function AdminPage() {
     await bulkDeleteUsers(user_ids, researcher_ids);
     setSelected(new Set());
     setBulkDeleting(false);
+    setInviteLink('');
+    setShowAddStudent(false);
     invalidateAdmin();
+    loadData?.();
   }
 
   async function handleRoleChange(userId) {
@@ -185,15 +188,20 @@ export default function AdminPage() {
 
   async function handleDelete(u) {
     if (!await confirm({ title: `Remover "${u.nome}"?`, description: 'Esta ação não pode ser desfeita.', confirmLabel: 'Remover', variant: 'danger' })) return;
-    if (u.pending && u.researcher_id) {
-      await deletePendingResearcher(u.researcher_id);
-    } else {
-      await deleteUser(u.id);
+    try {
+      if (u.pending && u.researcher_id) {
+        await deletePendingResearcher(u.researcher_id);
+      } else {
+        await deleteUser(u.id);
+      }
+      setInviteLink('');
+      setShowAddStudent(false);
+      setToast(`"${u.nome}" removido`);
+      invalidateAdmin();
+      loadData?.();
+    } catch (err) {
+      setToast(err.message || 'Erro ao remover usuário');
     }
-    setInviteLink('');
-    setShowAddStudent(false);
-    setToast(`"${u.nome}" removido`);
-    invalidateAdmin();
   }
 
   async function handleAddStudent(e) {
@@ -307,20 +315,24 @@ export default function AdminPage() {
                   Cadastrar Usuário
                 </button>
               )}
-              {canDelete && selected.size > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleting}
-                  className="flex items-center gap-2 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Remover {selected.size} selecionado{selected.size !== 1 ? 's' : ''}
-                </button>
-              )}
             </div>
           </div>
+
+          {canDelete && selected.size > 0 && (
+            <div className="px-6 py-2.5 bg-red-50 border-b flex items-center justify-between">
+              <span className="text-sm text-red-700">{selected.size} selecionado{selected.size !== 1 ? 's' : ''}</span>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remover selecionados
+              </button>
+            </div>
+          )}
 
           {showAddStudent && (
             <div className="px-6 py-4 border-b bg-green-50">

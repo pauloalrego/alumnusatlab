@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
@@ -242,6 +242,12 @@ def list_users(db: Session = Depends(get_db), current: User = Depends(require_da
         if institution_ids:
             # Professor: apenas usuários das instituições vinculadas
             # - exclui superadmin "puro" (sem researcher)
+            # Subquery: professores vinculados às instituições do professor logado
+            orientador_prof_ids = (
+                db.query(ProfessorInstitution.professor_id)
+                .filter(ProfessorInstitution.institution_id.in_(institution_ids))
+                .subquery()
+            )
             users = (
                 db.query(User)
                 .options(*eager_opts)
@@ -253,6 +259,7 @@ def list_users(db: Session = Depends(get_db), current: User = Depends(require_da
                     or_(
                         ProfessorInstitution.institution_id.in_(institution_ids),
                         ResearchGroup.institution_id.in_(institution_ids),
+                        and_(Researcher.group_id.is_(None), Researcher.orientador_id.in_(select(orientador_prof_ids))),
                     )
                 )
                 .filter(
@@ -367,6 +374,19 @@ def invite_professor(
         pi = ProfessorInstitution(professor_id=professor.id, institution_id=institution_id, institutional_email=data.email.strip())
         db.add(pi)
 
+        # Vincula ao grupo da instituição (cria se não existir)
+        group = db.query(ResearchGroup).filter(ResearchGroup.institution_id == institution_id).first()
+        if not group:
+            group = ResearchGroup(name="Grupo Principal", institution_id=institution_id)
+            db.add(group)
+            db.flush()
+        db.add(ProfessorGroup(
+            professor_id=professor.id,
+            group_id=group.id,
+            role_in_group="coordinator",
+            institution_id=institution_id,
+        ))
+
     user = User(
         email=data.email.strip(),
         nome=data.nome.strip(),
@@ -408,6 +428,10 @@ def delete_user(
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     if user.role == "superadmin" and current.role != "superadmin":
         raise HTTPException(status_code=403, detail="Apenas superadmin pode remover outro superadmin")
+    if user.professor_id:
+        count = db.query(Researcher).filter(Researcher.orientador_id == user.professor_id).count()
+        if count > 0:
+            raise HTTPException(status_code=400, detail=f"Este professor possui {count} aluno(s) vinculado(s). Remova ou reatribua os alunos antes de excluir.")
     # Nullify FK references to avoid integrity errors
     logger.warning("Usuário removido: user_id=%s email=%s role=%s por admin_id=%s", user.id, user.email, user.role, current.id)
     db.query(Note).filter(Note.created_by_id == user_id).update({"created_by_id": None})

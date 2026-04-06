@@ -374,6 +374,25 @@ class TestDeleteUser:
         resp = client.delete(f"/api/admin/users/{sa_user.id}")
         assert resp.status_code == 403
 
+    def test_cannot_delete_professor_with_students(self, superadmin_client):
+        client, sa, db = superadmin_client
+        prof = Professor()
+        db.add(prof)
+        db.flush()
+        prof_user = make_user(db, email="profstudents@univ.edu.br", role="professor")
+        prof_user.professor_id = prof.id
+        db.flush()
+
+        res = Researcher(status="mestrado", orientador_id=prof.id)
+        db.add(res)
+        db.flush()
+        make_user(db, email="aluno@univ.edu.br", role="researcher", researcher_id=res.id)
+        db.commit()
+
+        resp = client.delete(f"/api/admin/users/{prof_user.id}")
+        assert resp.status_code == 400
+        assert "aluno" in resp.json()["detail"].lower()
+
     def test_deleting_user_marks_researcher_inactive(self, superadmin_client):
         client, sa, db = superadmin_client
         researcher = make_researcher(db, nome="R del", email="rdel@univ.edu.br", password="somepassword1")
@@ -624,7 +643,7 @@ class TestInviteProfessor:
         assert plan.account_activated_at is not None
         assert plan.plan_period_ends_at is not None
 
-    def test_links_institution(self, superadmin_client):
+    def test_links_institution_and_group(self, superadmin_client):
         client, sa, db = superadmin_client
         inst = Institution(name="Inst Prof", domain="instprof.edu.br")
         db.add(inst)
@@ -637,11 +656,21 @@ class TestInviteProfessor:
         })
         assert resp.status_code == 201
         user = db.query(User).filter(User.id == resp.json()["id"]).first()
+
+        # Verifica ProfessorInstitution
         pi = db.query(ProfessorInstitution).filter(
             ProfessorInstitution.professor_id == user.professor_id
         ).first()
         assert pi is not None
         assert pi.institution_id == inst.id
+
+        # Verifica ProfessorGroup como coordinator
+        pg = db.query(ProfessorGroup).filter(
+            ProfessorGroup.professor_id == user.professor_id
+        ).first()
+        assert pg is not None
+        assert pg.role_in_group == "coordinator"
+        assert pg.institution_id == inst.id
 
     def test_duplicate_email_returns_409(self, superadmin_client):
         client, sa, db = superadmin_client
