@@ -188,6 +188,8 @@ export default function AppLayout() {
   const [changePwConfirm, setChangePwConfirm] = useState('');
   const [changePwError, setChangePwError] = useState('');
   const [changePwSaving, setChangePwSaving] = useState(false);
+  const [instDropdownOpen, setInstDropdownOpen] = useState(false);
+  const instDropdownRef = useRef(null);
   const settingsRef = useRef(null);
   const currentInstIdRef = useRef(null);
   const currentUserRef = useRef(null);
@@ -324,10 +326,11 @@ export default function AppLayout() {
     }).catch(() => {});
   }, []);
 
-  // Fecha dropdown ao clicar fora
+  // Fecha dropdowns ao clicar fora
   useEffect(() => {
     function handler(e) {
       if (settingsRef.current && !settingsRef.current.contains(e.target)) setSettingsOpen(false);
+      if (instDropdownRef.current && !instDropdownRef.current.contains(e.target)) setInstDropdownOpen(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -446,19 +449,35 @@ export default function AppLayout() {
                 </div>
               </Link>
               {institutions.length > 1 && (
-                <div className="mt-1 pl-9">
-                  <select
-                    value={currentInstitution?.id || ''}
-                    onChange={e => {
-                      const inst = institutions.find(i => i.id === Number(e.target.value));
-                      if (inst) handleSetCurrentInstitution(inst);
-                    }}
-                    className="w-full text-xs text-gray-700 border rounded-md px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-300 bg-white"
+                <div className="mt-1 pl-9 relative" ref={instDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setInstDropdownOpen(o => !o)}
+                    className="w-full flex items-center justify-between gap-1 text-xs text-gray-700 border rounded-md px-2 py-1.5 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-colors"
                   >
-                    {institutions.map(inst => (
-                      <option key={inst.id} value={inst.id}>{inst.name}</option>
-                    ))}
-                  </select>
+                    <span className="truncate">{currentInstitution?.name || 'Selecionar'}</span>
+                    <svg className={`w-3 h-3 shrink-0 text-gray-400 transition-transform ${instDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {instDropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg py-1 z-50 max-h-48 overflow-y-auto">
+                      {institutions.map(inst => (
+                        <button
+                          key={inst.id}
+                          type="button"
+                          onClick={() => { handleSetCurrentInstitution(inst); setInstDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                            inst.id === currentInstitution?.id
+                              ? 'bg-blue-50 text-blue-700 font-medium'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {inst.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
