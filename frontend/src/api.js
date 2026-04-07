@@ -116,6 +116,7 @@ export async function deleteReminder(id) {
 // Tips
 export const getTips = (institutionId) =>
   request(`/tips/${institutionId ? `?institution_id=${institutionId}` : ''}`);
+export const getTip = (id) => request(`/tips/${id}`);
 export const createTip = (data, institutionId) =>
   request('/tips/', { method: 'POST', body: JSON.stringify({ ...data, institution_id: institutionId || null }) });
 export const deleteTip = (id) => request(`/tips/${id}`, { method: 'DELETE' });

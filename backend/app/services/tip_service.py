@@ -27,6 +27,19 @@ def get_tip(db: Session, entry_id: int) -> Tip | None:
     return db.query(Tip).filter(Tip.id == entry_id).first()
 
 
+def get_tip_full(db: Session, entry_id: int) -> Tip | None:
+    return (
+        db.query(Tip)
+        .options(
+            joinedload(Tip.author),
+            joinedload(Tip.votes),
+            joinedload(Tip.comments).joinedload(TipComment.author),
+        )
+        .filter(Tip.id == entry_id)
+        .first()
+    )
+
+
 def create_tip(db: Session, data: TipCreate, author_id: int) -> Tip:
     entry = Tip(
         question=data.question,

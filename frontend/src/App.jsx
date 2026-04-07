@@ -6,6 +6,7 @@ import GraphPage from './pages/GraphPage';
 import ResearcherPage from './pages/ResearcherPage';
 import RemindersPage from './pages/RemindersPage';
 import ManualPage from './pages/ManualPage';
+import ManualDetailPage from './pages/ManualDetailPage';
 import DeadlinesPage from './pages/DeadlinesPage';
 import AdminPage from './pages/AdminPage';
 import InstitutionPage from './pages/InstitutionPage';
@@ -37,6 +38,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ManualPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="manual/:id"
+          element={
+            <ProtectedRoute>
+              <ManualDetailPage />
             </ProtectedRoute>
           }
         />

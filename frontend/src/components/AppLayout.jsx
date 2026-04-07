@@ -421,7 +421,7 @@ export default function AppLayout() {
   const pageHeading = useMemo(() => {
     const p = pathname || '/';
     if (p === '/app/group') return { title: 'Grupo', icon: 'grupo' };
-    if (p === '/app/manual') return { title: 'Manual de Sobrevivência', icon: 'manual' };
+    if (p === '/app/manual' || p.startsWith('/app/manual/')) return { title: 'Manual de Sobrevivência', icon: 'manual' };
     if (p === '/app/reminders') return { title: 'Lembretes', icon: 'reminders' };
     if (p === '/app/deadlines') return { title: 'Próximos deadlines', icon: 'deadlines' };
     if (p === '/app/admin') return { title: 'Dashboard', icon: 'admin' };
