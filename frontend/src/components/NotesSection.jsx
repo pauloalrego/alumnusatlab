@@ -130,7 +130,7 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
         )}
 
         {(open || alwaysOpen) && (
-          <div className="px-6 pb-6 space-y-4 border-t">
+          <div className="px-6 pb-6 border-t">
             {canAdd && (
               <form onSubmit={handleSubmit} className="space-y-2 pt-4">
                 <RichEditor
@@ -160,50 +160,65 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
                 </div>
               </form>
             )}
-
-            {notes.length > 0 && (
-              <div className="max-h-96 overflow-y-auto">
-                <ul className="divide-y divide-gray-100">
-                  {notes.map(note => (
-                    <li key={note.id} className="py-4 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div>
-                          <span className="text-xs text-gray-400">{formatDate(note.created_at)}</span>
-                          {note.created_by_name && (
-                            <span className="ml-1.5 text-xs text-gray-500">
-                              por <Link to={`/app/profile/${slugify(note.created_by_name)}`} className="font-semibold text-gray-700 hover:underline hover:text-blue-600">{note.created_by_name}</Link>
-                            </span>
-                          )}
-                        </div>
-                        {(isProfessor || note.created_by_id === currentUserId) && (
-                          <button onClick={() => handleDelete(note.id)} title="Remover anotação" className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                      <RichContent html={note.text} researchers={researchers} className="text-sm text-gray-700" />
-                      {note.file_url && (
-                        <a href={note.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 hover:underline">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                          {note.file_name || 'Anexo'}
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {notes.length === 0 && loaded.current && !canAdd && (
+              <p className="text-xs text-gray-400 py-4">Nenhuma anotação ainda.</p>
             )}
-
-            {notes.length === 0 && loaded.current && (
-              <p className="text-xs text-gray-400 py-2">Nenhuma anotação ainda.</p>
+            {notes.length === 0 && loaded.current && canAdd && (
+              <p className="text-xs text-gray-400 pt-3">Nenhuma anotação ainda.</p>
             )}
           </div>
         )}
       </section>
+
+      {/* Cards de anotações — fora do box principal */}
+      {(open || alwaysOpen) && notes.length > 0 && (
+        <div className="space-y-4 mt-4">
+          {notes.map(note => {
+            const initials = (note.created_by_name || '?').split(' ').filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('');
+            return (
+              <div key={note.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                      {initials}
+                    </div>
+                    <div>
+                      {note.created_by_name ? (
+                        <Link to={`/app/profile/${slugify(note.created_by_name)}`} className="text-sm font-semibold text-gray-800 hover:text-blue-600 hover:underline leading-none">
+                          {note.created_by_name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-800 leading-none">Anônimo</span>
+                      )}
+                      <p className="text-xs text-gray-400 mt-0.5">{formatDate(note.created_at)}</p>
+                    </div>
+                  </div>
+                  {(isProfessor || note.created_by_id === currentUserId) && (
+                    <button onClick={() => handleDelete(note.id)} title="Remover anotação" className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {/* Corpo */}
+                <div className="px-5 py-5 bg-gray-50 border-t border-gray-100">
+                  <RichContent html={note.text} researchers={researchers} className="text-sm text-gray-700 leading-relaxed" />
+                  {note.file_url && (
+                    <a href={note.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-xs text-blue-600 hover:underline">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      {note.file_name || 'Anexo'}
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
