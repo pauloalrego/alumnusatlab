@@ -151,7 +151,7 @@ export function useReadings(userId) {
 
 // ── Versão compacta para o perfil ────────────────────────────────────────────
 
-export default function ReadingList({ userId, canEdit, slug }) {
+export default function ReadingList({ userId, canEdit, slug, preview = false }) {
   const [urlInput, setUrlInput] = useState('');
   const [adding, setAdding]     = useState(false);
 
@@ -175,7 +175,7 @@ export default function ReadingList({ userId, canEdit, slug }) {
     if (ok) setUrlInput('');
   }
 
-  const preview = [...readings]
+  const previewItems = [...readings]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 3);
 
@@ -183,12 +183,17 @@ export default function ReadingList({ userId, canEdit, slug }) {
     <section className="bg-white rounded-xl border shadow-sm overflow-hidden">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="px-6 py-4 border-b">
+      <div className="px-6 py-4 border-b flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800">📚 Leituras</h2>
+        {slug && readings.length > 1 && (
+          <Link to={`/app/profile/${slug}/readings`} className="text-sm text-blue-600 hover:underline">
+            Ver todos →
+          </Link>
+        )}
       </div>
 
       <div className="px-6 py-4 space-y-3">
-        {canEdit && (
+        {canEdit && !preview && (
           <form onSubmit={submitAdd} className="flex gap-2">
             <input
               type="url"
@@ -208,12 +213,12 @@ export default function ReadingList({ userId, canEdit, slug }) {
           </form>
         )}
 
-        {preview.length === 0 && (
+        {previewItems.length === 0 && (
           <p className="text-sm text-gray-400 italic">Nenhuma leitura ainda.</p>
         )}
 
         <div className="space-y-2">
-          {preview.map(r => (
+          {previewItems.map(r => (
             <div key={r.id} className="flex items-start justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
               <div className="flex-1 min-w-0">
                 <a
@@ -267,14 +272,6 @@ export default function ReadingList({ userId, canEdit, slug }) {
           ))}
         </div>
 
-        {slug && readings.length > 1 && (
-          <Link
-            to={`/app/profile/${slug}/readings`}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Ver todas as leituras →
-          </Link>
-        )}
       </div>
 
       {pendingDelete && (

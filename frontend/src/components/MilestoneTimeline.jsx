@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { getMilestones, createMilestone, updateMilestone, deleteMilestone } from '../api';
 import Toast from './Toast';
 
@@ -218,7 +219,7 @@ function TimelineItem({ item, position, canEdit, onEdit, onDelete, isPast }) {
 
 // ── Componente principal ─────────────────────────────────────────────────────
 
-export default function MilestoneTimeline({ userId, researcher, canEdit }) {
+export default function MilestoneTimeline({ userId, researcher, canEdit, preview = false, slug, alwaysOpen = false }) {
   const [open,          setOpen]          = useState(true);
   const [milestones,    setMilestones]    = useState([]);
   const [modalOpen,     setModalOpen]     = useState(false);
@@ -270,24 +271,67 @@ export default function MilestoneTimeline({ userId, researcher, canEdit }) {
 
   if (!userId) return null;
 
+  if (preview) {
+    const recentItems = milestones
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-3);
+    return (
+      <section className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-800">🏁 Marcos temporais</h2>
+          {slug && milestones.length > 0 && (
+            <Link to={`/app/profile/${slug}/milestones`} className="text-sm text-blue-600 hover:underline">
+              Ver todos →
+            </Link>
+          )}
+        </div>
+        <div className="px-6 py-4">
+          {recentItems.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Nenhum marco registrado.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentItems.map(item => {
+                const cfg = TYPE_CONFIG[item.type] ?? TYPE_CONFIG.outro;
+                return (
+                  <li key={item.id} className="flex items-center gap-3">
+                    <span className="text-base shrink-0">{cfg.emoji}</span>
+                    <span className="text-sm text-gray-800 flex-1 min-w-0 truncate">{item.title}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{formatDate(item.date)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="bg-white rounded-xl border shadow-sm overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
-      >
-        <h2 className="text-lg font-bold text-gray-800">🏁 Marcos temporais</h2>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+      {alwaysOpen ? (
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-lg font-bold text-gray-800">🏁 Marcos temporais</h2>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <h2 className="text-lg font-bold text-gray-800">🏁 Marcos temporais</h2>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      )}
 
-      {open && <div className="px-5 pb-5 border-t">
+      {(open || alwaysOpen) && <div className="px-5 pb-5 border-t">
         <div className="flex justify-end pt-3 mb-2">
           {canEdit && (
             <button

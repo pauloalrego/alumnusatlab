@@ -167,6 +167,7 @@ export default function ReadingsPage() {
       lastLoginLine: null,
       onAvatarClick: null,
       uploadingPhoto: false,
+      hideSettings:  true,
     });
     return () => setProfileTopbar(null);
   }, [profile, setProfileTopbar]);

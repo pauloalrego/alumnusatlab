@@ -549,7 +549,7 @@ export default function AppLayout() {
               )}
             </span>
             {/* Configurações */}
-            <div className="relative" ref={settingsRef}>
+            {!profileTopbar?.hideSettings && <div className="relative" ref={settingsRef}>
               <button
                 type="button"
                 aria-label="Configurações"
@@ -615,7 +615,7 @@ export default function AppLayout() {
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </header>
 

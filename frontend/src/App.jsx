@@ -12,6 +12,8 @@ import InstitutionPage from './pages/InstitutionPage';
 import AuthPage from './pages/AuthPage';
 import LandingPage from './pages/LandingPage';
 import ReadingsPage from './pages/ReadingsPage';
+import MilestonesPage from './pages/MilestonesPage';
+import NotesPage from './pages/NotesPage';
 
 
 export default function App() {
@@ -52,6 +54,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ReadingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="profile/:slug/milestones"
+          element={
+            <ProtectedRoute>
+              <MilestonesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="profile/:slug/notes"
+          element={
+            <ProtectedRoute>
+              <NotesPage />
             </ProtectedRoute>
           }
         />
