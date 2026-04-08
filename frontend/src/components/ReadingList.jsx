@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { slugify } from '../mentionUtils.jsx';
 import { getReadings, createReading, updateReadingStatus, deleteReading, summarizeReading } from '../api';
 import Toast from './Toast';
 
@@ -230,7 +231,12 @@ export default function ReadingList({ userId, canEdit, slug, preview = false }) 
                 >
                   {r.title || r.url}
                 </a>
-                <p className="text-[11px] text-gray-400 mt-0.5">Adicionado em {fmtDate(r.created_at)}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Adicionado em {fmtDate(r.created_at)}
+                  {r.created_by_name && (
+                    <> · por <Link to={`/app/profile/${slugify(r.created_by_name)}`} className="hover:underline hover:text-gray-600">{r.created_by_name}</Link></>
+                  )}
+                </p>
               </div>
               {canEdit ? (
                 <div className="flex items-center gap-1 shrink-0">

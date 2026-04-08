@@ -18,7 +18,15 @@ async function request(path, options = {}) {
     return;
   }
   if (res.status === 204 || res.status === 205) return null;
-  if (options.method === 'DELETE') return null;
+  if (options.method === 'DELETE') {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const err = new Error(body.detail || 'Erro na requisição');
+      err.status = res.status;
+      throw err;
+    }
+    return null;
+  }
   return res.json();
 }
 
@@ -108,6 +116,7 @@ export async function deleteReminder(id) {
 // Tips
 export const getTips = (institutionId) =>
   request(`/tips/${institutionId ? `?institution_id=${institutionId}` : ''}`);
+export const getTip = (id) => request(`/tips/${id}`);
 export const createTip = (data, institutionId) =>
   request('/tips/', { method: 'POST', body: JSON.stringify({ ...data, institution_id: institutionId || null }) });
 export const deleteTip = (id) => request(`/tips/${id}`, { method: 'DELETE' });
@@ -175,6 +184,7 @@ export const updateUserRole = (id, role) => request(`/admin/users/${id}`, { meth
 export const deleteUser = (id) => request(`/admin/users/${id}`, { method: 'DELETE' });
 export const deletePendingResearcher = (id) => request(`/admin/researchers/${id}`, { method: 'DELETE' });
 export const bulkDeleteUsers = (user_ids, researcher_ids) => request('/admin/bulk-delete', { method: 'POST', body: JSON.stringify({ user_ids, researcher_ids }) });
+export const inviteProfessor = (data) => request('/admin/invite-professor', { method: 'POST', body: JSON.stringify(data) });
 
 // Milestones
 export const getMilestones      = (userId) => request(`/users/${userId}/milestones/`);

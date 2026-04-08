@@ -62,19 +62,17 @@ def create(db: Session, data: ResearcherCreate) -> Researcher:
     # Resolve group_id
     institution_id = data.institution_id
     group_id = data.group_id
-    if group_id is None:
-        if data.orientador_id is not None:
-            group_id = _resolve_group_id(db, data.orientador_id, institution_id)
-        elif institution_id is not None:
-            group = db.query(ResearchGroup).filter(ResearchGroup.institution_id == institution_id).first()
-            group_id = group.id if group else None
+    if group_id is None and data.orientador_id is not None:
+        group_id = _resolve_group_id(db, data.orientador_id, institution_id)
+    if group_id is None and institution_id is not None:
+        group = db.query(ResearchGroup).filter(ResearchGroup.institution_id == institution_id).first()
+        group_id = group.id if group else None
 
     # Cria Researcher sem nome/email (ficam no User)
     researcher = Researcher(
         status=data.status,
         group_id=group_id,
         orientador_id=data.orientador_id,
-        observacoes=data.observacoes,
     )
     db.add(researcher)
     db.flush()  # gera researcher.id antes de criar o User

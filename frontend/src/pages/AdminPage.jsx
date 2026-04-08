@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, deletePendingResearcher, bulkDeleteUsers, createResearcher } from '../api';
+import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, deletePendingResearcher, bulkDeleteUsers, createResearcher, inviteProfessor } from '../api';
 import { keys } from '../queryKeys';
 import { getTokenPayload } from '../auth';
 import { useAppLayout } from '../components/AppLayout';
 import Toast from '../components/Toast';
 import { useConfirm } from '../components/ConfirmModal';
+import { isPublicEmailDomain, INSTITUTIONAL_EMAIL_ERROR_PT } from '../institutionalEmail';
 
 const ROLE_LABELS = { superadmin: 'Superadmin', professor: 'Professor', researcher: 'Aluno' };
 const STATUS_LABELS = { graduacao: 'Graduação', mestrado: 'Mestrado', doutorado: 'Doutorado', postdoc: 'Pós-doc', professor: 'Professor' };
@@ -34,13 +35,49 @@ function StatCard({ label, value, color = 'text-blue-600' }) {
   );
 }
 
+function shortName(nome) {
+  if (!nome) return '';
+  const parts = nome.trim().split(/\s+/);
+  if (parts.length <= 2) return nome;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
 function slugify(nome) {
   return (nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
 }
 
 const ROLE_ORDER = { superadmin: 0, professor: 1, researcher: 2 };
-const SORT_USERS = (u) => [u.pending ? 1 : 0, ROLE_ORDER[u.role] ?? 99, u.nome || ''];
+
+function sortUsers(rawUsers, col, dir) {
+  return [...rawUsers].sort((a, b) => {
+    let av, bv;
+    if (col === 'nome') {
+      // pendentes sempre no final
+      if (a.pending !== b.pending) return a.pending ? 1 : -1;
+      av = (a.nome || '').toLowerCase();
+      bv = (b.nome || '').toLowerCase();
+    } else if (col === 'perfil') {
+      if (a.pending !== b.pending) return a.pending ? 1 : -1;
+      av = ROLE_ORDER[a.role] ?? 99;
+      bv = ROLE_ORDER[b.role] ?? 99;
+      return dir === 'asc' ? av - bv : bv - av;
+    } else if (col === 'instituicao') {
+      av = (a.institutions?.[0] || '').toLowerCase();
+      bv = (b.institutions?.[0] || '').toLowerCase();
+    } else if (col === 'ultimo_acesso') {
+      av = a.last_login || '';
+      bv = b.last_login || '';
+    } else {
+      // default: pendentes → role → nome
+      if (a.pending !== b.pending) return a.pending ? 1 : -1;
+      if (a.role !== b.role) return (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99);
+      return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+    }
+    const cmp = typeof av === 'string' ? av.localeCompare(bv, 'pt-BR') : av < bv ? -1 : av > bv ? 1 : 0;
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -48,13 +85,15 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { data: stats = null } = useQuery({ queryKey: keys.adminStats(), queryFn: getAdminStats });
   const { data: rawUsers = [] } = useQuery({ queryKey: keys.adminUsers(), queryFn: getAdminUsers });
-  const users = [...rawUsers].sort((a, b) => {
-    const [ap, ar, an] = SORT_USERS(a);
-    const [bp, br, bn] = SORT_USERS(b);
-    if (ap !== bp) return ap - bp;
-    if (ar !== br) return ar - br;
-    return an.localeCompare(bn, 'pt-BR');
-  });
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+
+  const users = sortUsers(rawUsers, sortCol, sortDir);
+
+  function handleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  }
 
   const invalidateAdmin = () => {
     queryClient.invalidateQueries({ queryKey: keys.adminUsers() });
@@ -72,6 +111,7 @@ export default function AdminPage() {
   const [newStudentEmail, setNewStudentEmail] = useState('');
   const [newStudentStatus, setNewStudentStatus] = useState('mestrado');
   const [newStudentInstId, setNewStudentInstId] = useState('');
+  const [newUserRole, setNewUserRole] = useState('researcher');
   const [addingStudent, setAddingStudent] = useState(false);
   const [addStudentError, setAddStudentError] = useState('');
   const [inviteLink, setInviteLink] = useState('');
@@ -132,7 +172,10 @@ export default function AdminPage() {
     await bulkDeleteUsers(user_ids, researcher_ids);
     setSelected(new Set());
     setBulkDeleting(false);
+    setInviteLink('');
+    setShowAddStudent(false);
     invalidateAdmin();
+    loadData?.();
   }
 
   async function handleRoleChange(userId) {
@@ -145,24 +188,40 @@ export default function AdminPage() {
 
   async function handleDelete(u) {
     if (!await confirm({ title: `Remover "${u.nome}"?`, description: 'Esta ação não pode ser desfeita.', confirmLabel: 'Remover', variant: 'danger' })) return;
-    if (u.pending) {
-      await deletePendingResearcher(u.researcher_id);
-    } else {
-      await deleteUser(u.id);
+    try {
+      if (u.pending && u.researcher_id) {
+        await deletePendingResearcher(u.researcher_id);
+      } else {
+        await deleteUser(u.id);
+      }
+      setInviteLink('');
+      setShowAddStudent(false);
+      setToast(`"${u.nome}" removido`);
+      invalidateAdmin();
+      loadData?.();
+    } catch (err) {
+      setToast(err.message || 'Erro ao remover usuário');
     }
-    setToast(`"${u.nome}" removido`);
-    invalidateAdmin();
   }
 
   async function handleAddStudent(e) {
     e.preventDefault();
     if (!newStudentNome.trim() || !newStudentEmail.trim()) return;
+    if (newUserRole === 'professor' && isPublicEmailDomain(newStudentEmail)) {
+      setAddStudentError(INSTITUTIONAL_EMAIL_ERROR_PT);
+      return;
+    }
     setAddingStudent(true);
     setAddStudentError('');
     try {
-      const myPayload = getTokenPayload();
       const instId = newStudentInstId ? Number(newStudentInstId) : null;
-      const r = await createResearcher({ nome: newStudentNome.trim(), email: newStudentEmail.trim(), status: newStudentStatus, orientador_id: myPayload?.professor_id || null, institution_id: instId });
+      let r;
+      if (newUserRole === 'professor') {
+        r = await inviteProfessor({ nome: newStudentNome.trim(), email: newStudentEmail.trim(), institution_id: instId });
+      } else {
+        const myPayload = getTokenPayload();
+        r = await createResearcher({ nome: newStudentNome.trim(), email: newStudentEmail.trim(), status: newStudentStatus, orientador_id: myPayload?.professor_id || null, institution_id: instId });
+      }
       if (r?.id) {
         const token = btoa(newStudentEmail.trim());
         const url = `${window.location.origin}/entrar?tab=cadastro&token=${token}`;
@@ -170,14 +229,15 @@ export default function AdminPage() {
         setNewStudentNome('');
         setNewStudentEmail('');
         setNewStudentStatus('mestrado');
+        setNewUserRole('researcher');
         setNewStudentInstId(institutions.length > 0 ? String(institutions[0].id) : '');
         invalidateAdmin();
         loadData?.();
       } else {
-        setAddStudentError(r?.detail || 'Erro ao cadastrar aluno');
+        setAddStudentError(r?.detail || 'Erro ao cadastrar usuário');
       }
     } catch {
-      setAddStudentError('Erro ao cadastrar aluno');
+      setAddStudentError('Erro ao cadastrar usuário');
     } finally {
       setAddingStudent(false);
     }
@@ -252,23 +312,27 @@ export default function AdminPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Cadastrar Aluno
-                </button>
-              )}
-              {canDelete && selected.size > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleting}
-                  className="flex items-center gap-2 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Remover {selected.size} selecionado{selected.size !== 1 ? 's' : ''}
+                  Cadastrar Usuário
                 </button>
               )}
             </div>
           </div>
+
+          {canDelete && selected.size > 0 && (
+            <div className="px-6 py-2.5 bg-red-50 border-b flex items-center justify-between">
+              <span className="text-sm text-red-700">{selected.size} selecionado{selected.size !== 1 ? 's' : ''}</span>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remover selecionados
+              </button>
+            </div>
+          )}
 
           {showAddStudent && (
             <div className="px-6 py-4 border-b bg-green-50">
@@ -288,7 +352,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <form onSubmit={handleAddStudent} className="space-y-3">
-                  <p className="text-sm font-semibold text-gray-700">Cadastrar novo aluno</p>
+                  <p className="text-sm font-semibold text-gray-700">Cadastrar novo usuário</p>
                   <div className="flex gap-3 flex-wrap">
                     <input
                       required
@@ -306,15 +370,25 @@ export default function AdminPage() {
                       className="flex-1 min-w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                     />
                     <select
-                      value={newStudentStatus}
-                      onChange={e => setNewStudentStatus(e.target.value)}
+                      value={newUserRole}
+                      onChange={e => setNewUserRole(e.target.value)}
                       className="border rounded-lg px-3 py-2 text-sm"
                     >
-                      <option value="graduacao">Graduação</option>
-                      <option value="mestrado">Mestrado</option>
-                      <option value="doutorado">Doutorado</option>
-                      <option value="postdoc">Pós-doc</option>
+                      <option value="researcher">Aluno</option>
+                      <option value="professor">Professor</option>
                     </select>
+                    {newUserRole === 'researcher' && (
+                      <select
+                        value={newStudentStatus}
+                        onChange={e => setNewStudentStatus(e.target.value)}
+                        className="border rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option value="graduacao">Graduação</option>
+                        <option value="mestrado">Mestrado</option>
+                        <option value="doutorado">Doutorado</option>
+                        <option value="postdoc">Pós-doc</option>
+                      </select>
+                    )}
                     {institutions.length === 1 ? (
                       <span className="flex items-center px-3 py-2 text-sm text-gray-600 border rounded-lg bg-gray-50">
                         {institutions[0].name}
@@ -353,13 +427,32 @@ export default function AdminPage() {
                       <input type="checkbox" checked={users.length > 0 && selected.size === users.length} onChange={toggleAll} className="rounded border-gray-300" />
                     </th>
                   )}
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Perfil</th>
-                  <th className="px-4 py-3">Instituição</th>
-                  <th className="px-4 py-3">WhatsApp</th>
-                  <th className="px-4 py-3">Último acesso</th>
-                  <th className="px-4 py-3">Ações</th>
+                  {[
+                    { key: 'nome',          label: 'Nome' },
+                    { key: null,            label: 'Email' },
+                    { key: 'perfil',        label: 'Perfil' },
+                    { key: 'instituicao',   label: 'Instituição' },
+                    { key: null,            label: 'WhatsApp' },
+                    { key: 'ultimo_acesso', label: 'Último acesso' },
+                    { key: null,            label: 'Ações' },
+                  ].map(({ key, label }) =>
+                    key ? (
+                      <th key={label} className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSort(key)}
+                          className="inline-flex items-center gap-1 hover:text-gray-800 transition-colors"
+                        >
+                          {label}
+                          <span className="text-[10px] leading-none">
+                            {sortCol === key ? (sortDir === 'asc' ? '▲' : '▼') : '⬍'}
+                          </span>
+                        </button>
+                      </th>
+                    ) : (
+                      <th key={label} className="px-4 py-3">{label}</th>
+                    )
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -377,9 +470,9 @@ export default function AdminPage() {
                           : <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">{(u.nome || '?')[0].toUpperCase()}</div>
                         }
                         <span className="font-medium text-gray-800">
-                          {u.researcher_nome
-                            ? <a href={`/app/profile/${slugify(u.nome)}`} className="hover:text-blue-600 hover:underline">{u.nome}</a>
-                            : u.nome}
+                          {!u.pending && u.role !== 'superadmin'
+                            ? <a href={`/app/profile/${slugify(u.nome)}`} className="hover:text-blue-600 hover:underline" title={u.nome}>{shortName(u.nome)}</a>
+                            : shortName(u.nome)}
                         </span>
                       </div>
                     </td>

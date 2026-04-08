@@ -4,7 +4,7 @@ import os
 import httpx
 from bs4 import BeautifulSoup
 from openai import OpenAI
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..models import Reading, ReadingStatusHistory
 
@@ -17,6 +17,10 @@ OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 def list_by_user(db: Session, user_id: int) -> list[Reading]:
     return (
         db.query(Reading)
+        .options(
+            joinedload(Reading.created_by),
+            joinedload(Reading.status_history).joinedload(ReadingStatusHistory.changed_by),
+        )
         .filter(Reading.user_id == user_id)
         .order_by(Reading.created_at.desc())
         .all()

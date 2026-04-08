@@ -2,13 +2,14 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..deps import require_dashboard, require_superadmin, require_professor
-from ..models import User, Researcher, Reminder, Tip, TipComment, Note, ResearchGroup, ProfessorGroup, Professor, ProfessorInstitution
+from ..models import User, UserPlan, Researcher, Reminder, Tip, TipComment, Note, ResearchGroup, ProfessorGroup, Professor, ProfessorInstitution, Milestone
 from ..plan import clear_plan, ensure_professor_plan_defaults
+from ..institutional_email import is_public_email_domain
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -241,6 +242,12 @@ def list_users(db: Session = Depends(get_db), current: User = Depends(require_da
         if institution_ids:
             # Professor: apenas usuários das instituições vinculadas
             # - exclui superadmin "puro" (sem researcher)
+            # Subquery: professores vinculados às instituições do professor logado
+            orientador_prof_ids = (
+                db.query(ProfessorInstitution.professor_id)
+                .filter(ProfessorInstitution.institution_id.in_(institution_ids))
+                .subquery()
+            )
             users = (
                 db.query(User)
                 .options(*eager_opts)
@@ -252,6 +259,7 @@ def list_users(db: Session = Depends(get_db), current: User = Depends(require_da
                     or_(
                         ProfessorInstitution.institution_id.in_(institution_ids),
                         ResearchGroup.institution_id.in_(institution_ids),
+                        and_(Researcher.group_id.is_(None), Researcher.orientador_id.in_(select(orientador_prof_ids))),
                     )
                 )
                 .filter(
@@ -330,6 +338,81 @@ def update_user(
     return {"id": user.id, "role": user.role, "is_admin": user.role == "superadmin"}
 
 
+# ── Invite professor ────────────────────────────────────────────────────────
+
+class InviteProfessorRequest(BaseModel):
+    nome: str
+    email: str
+    institution_id: int | None = None
+
+
+@router.post("/invite-professor", status_code=201)
+def invite_professor(
+    data: InviteProfessorRequest,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_dashboard),
+):
+    if is_public_email_domain(data.email.strip()):
+        raise HTTPException(status_code=400, detail="Professores devem usar e-mail institucional da universidade. E-mails públicos (Gmail, Hotmail, etc.) não são aceitos.")
+    if db.query(User).filter(func.lower(User.email) == data.email.strip().lower()).first():
+        raise HTTPException(status_code=409, detail="Email já cadastrado")
+
+    professor = Professor()
+    db.add(professor)
+    db.flush()
+
+    # Resolve instituição: usa a informada ou herda do professor que está convidando
+    institution_id = data.institution_id
+    if not institution_id and current.professor_id:
+        origin_pi = db.query(ProfessorInstitution).filter(
+            ProfessorInstitution.professor_id == current.professor_id
+        ).first()
+        if origin_pi:
+            institution_id = origin_pi.institution_id
+
+    if institution_id:
+        pi = ProfessorInstitution(professor_id=professor.id, institution_id=institution_id, institutional_email=data.email.strip())
+        db.add(pi)
+
+        # Vincula ao grupo da instituição (cria se não existir)
+        group = db.query(ResearchGroup).filter(ResearchGroup.institution_id == institution_id).first()
+        if not group:
+            group = ResearchGroup(name="Grupo Principal", institution_id=institution_id)
+            db.add(group)
+            db.flush()
+        db.add(ProfessorGroup(
+            professor_id=professor.id,
+            group_id=group.id,
+            role_in_group="coordinator",
+            institution_id=institution_id,
+        ))
+
+    user = User(
+        email=data.email.strip(),
+        nome=data.nome.strip(),
+        password_hash=None,
+        role="professor",
+        professor_id=professor.id,
+    )
+    db.add(user)
+    db.flush()
+
+    milestone = Milestone(
+        user_id=user.id,
+        type="entrada",
+        title="Entrada no Alumnus",
+        date=user.created_at.date(),
+        created_by_id=user.id,
+    )
+    db.add(milestone)
+
+    ensure_professor_plan_defaults(user)
+    db.commit()
+
+    logger.info("Professor convidado: email=%s professor_id=%s por admin_id=%s", data.email, professor.id, current.id)
+    return {"id": user.id, "email": user.email, "nome": user.nome, "role": user.role}
+
+
 # ── Delete user (superadmin only) ─────────────────────────────────────────────
 
 @router.delete("/users/{user_id}", status_code=204)
@@ -345,13 +428,25 @@ def delete_user(
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     if user.role == "superadmin" and current.role != "superadmin":
         raise HTTPException(status_code=403, detail="Apenas superadmin pode remover outro superadmin")
+    if user.professor_id:
+        count = db.query(Researcher).filter(Researcher.orientador_id == user.professor_id).count()
+        if count > 0:
+            raise HTTPException(status_code=400, detail=f"Este professor possui {count} aluno(s) vinculado(s). Remova ou reatribua os alunos antes de excluir.")
     # Nullify FK references to avoid integrity errors
     logger.warning("Usuário removido: user_id=%s email=%s role=%s por admin_id=%s", user.id, user.email, user.role, current.id)
     db.query(Note).filter(Note.created_by_id == user_id).update({"created_by_id": None})
     db.query(Reminder).filter(Reminder.created_by_id == user_id).update({"created_by_id": None})
     db.query(Tip).filter(Tip.author_id == user_id).update({"author_id": None})
     db.query(TipComment).filter(TipComment.author_id == user_id).update({"author_id": None})
+    db.query(UserPlan).filter(UserPlan.user_id == user_id).delete()
+    db.query(Milestone).filter(Milestone.user_id == user_id).delete()
+    professor_id = user.professor_id
     db.delete(user)
+    # Remove professor órfão (cascade limpa professor_institutions/groups)
+    if professor_id:
+        prof = db.query(Professor).filter(Professor.id == professor_id).first()
+        if prof:
+            db.delete(prof)
     db.commit()
 
 

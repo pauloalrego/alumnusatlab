@@ -61,8 +61,8 @@ export function isPublicEmailDomain(email) {
 
 /** Mensagem alinhada ao backend (INSTITUTIONAL_EMAIL_HELP_PT) */
 export const INSTITUTIONAL_EMAIL_ERROR_PT =
-  'Use um e-mail institucional da sua universidade (ex.: @universidade.edu.br, @usp.br). ' +
-  'E-mails públicos (Gmail, Hotmail, Outlook, UOL etc.) não são aceitos para cadastro.';
+  'Professores devem usar e-mail institucional da universidade (ex.: @universidade.edu.br, @usp.br). ' +
+  'E-mails públicos (Gmail, Hotmail, Outlook, UOL etc.) não são aceitos.';
 
 export const REGISTER_PROFESSOR_ONLY_HINT_PT =
   'Cadastro exclusivo para professores. É obrigatório usar e-mail institucional da universidade.';

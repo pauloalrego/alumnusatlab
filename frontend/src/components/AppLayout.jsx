@@ -82,6 +82,12 @@ function AppPageHeadingIcon({ name }) {
         </svg>
       );
     }
+    case 'plan':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -188,6 +194,8 @@ export default function AppLayout() {
   const [changePwConfirm, setChangePwConfirm] = useState('');
   const [changePwError, setChangePwError] = useState('');
   const [changePwSaving, setChangePwSaving] = useState(false);
+  const [instDropdownOpen, setInstDropdownOpen] = useState(false);
+  const instDropdownRef = useRef(null);
   const settingsRef = useRef(null);
   const currentInstIdRef = useRef(null);
   const currentUserRef = useRef(null);
@@ -221,7 +229,6 @@ export default function AppLayout() {
         matricula: null,
         curso: null,
         enrollment_date: null,
-        observacoes: null,
       }));
     setResearchers([...professorEntries, ...(researchersData || [])]);
     setNodes(
@@ -313,18 +320,22 @@ export default function AppLayout() {
               setCurrentInstitution(null);
             }
           }).catch(() => { setCurrentInstitution(null); });
+        } else if (u.institution_id) {
+          // researcher: deriva instituição do perfil
+          setCurrentInstitution({ id: u.institution_id, name: u.institution_name || '' });
+          setInstitutionName(u.institution_name || '');
         } else {
-          // researcher: sem filtro de instituição
           setCurrentInstitution(null);
         }
       }
     }).catch(() => {});
   }, []);
 
-  // Fecha dropdown ao clicar fora
+  // Fecha dropdowns ao clicar fora
   useEffect(() => {
     function handler(e) {
       if (settingsRef.current && !settingsRef.current.contains(e.target)) setSettingsOpen(false);
+      if (instDropdownRef.current && !instDropdownRef.current.contains(e.target)) setInstDropdownOpen(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -410,10 +421,11 @@ export default function AppLayout() {
   const pageHeading = useMemo(() => {
     const p = pathname || '/';
     if (p === '/app/group') return { title: 'Grupo', icon: 'grupo' };
-    if (p === '/app/manual') return { title: 'Manual de Sobrevivência', icon: 'manual' };
+    if (p === '/app/manual' || p.startsWith('/app/manual/')) return { title: 'Manual de Sobrevivência', icon: 'manual' };
     if (p === '/app/reminders') return { title: 'Lembretes', icon: 'reminders' };
     if (p === '/app/deadlines') return { title: 'Próximos deadlines', icon: 'deadlines' };
     if (p === '/app/admin') return { title: 'Dashboard', icon: 'admin' };
+    if (p === '/app/plan') return { title: 'Meu Plano', icon: 'plan' };
     return null;
   }, [pathname]);
 
@@ -443,19 +455,35 @@ export default function AppLayout() {
                 </div>
               </Link>
               {institutions.length > 1 && (
-                <div className="mt-1 pl-9">
-                  <select
-                    value={currentInstitution?.id || ''}
-                    onChange={e => {
-                      const inst = institutions.find(i => i.id === Number(e.target.value));
-                      if (inst) handleSetCurrentInstitution(inst);
-                    }}
-                    className="w-full text-xs text-gray-700 border rounded-md px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-300 bg-white"
+                <div className="mt-1 pl-9 relative" ref={instDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setInstDropdownOpen(o => !o)}
+                    className="w-full flex items-center justify-between gap-1 text-xs text-gray-700 border rounded-md px-2 py-1.5 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-colors"
                   >
-                    {institutions.map(inst => (
-                      <option key={inst.id} value={inst.id}>{inst.name}</option>
-                    ))}
-                  </select>
+                    <span className="truncate">{currentInstitution?.name || 'Selecionar'}</span>
+                    <svg className={`w-3 h-3 shrink-0 text-gray-400 transition-transform ${instDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {instDropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg py-1 z-50 max-h-48 overflow-y-auto">
+                      {institutions.map(inst => (
+                        <button
+                          key={inst.id}
+                          type="button"
+                          onClick={() => { handleSetCurrentInstitution(inst); setInstDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                            inst.id === currentInstitution?.id
+                              ? 'bg-blue-50 text-blue-700 font-medium'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {inst.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -548,6 +576,11 @@ export default function AppLayout() {
                 <span className="font-medium text-gray-600">{firstName}</span>
               )}
             </span>
+            {currentUser?.plan_type === 'trial' && currentUser?.role === 'professor' && (
+              <Link to="/app/plan" className="text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-600 px-2 py-0.5 rounded-full border border-red-200 hover:bg-red-200 transition-colors">
+                Trial
+              </Link>
+            )}
             {/* Configurações */}
             {!profileTopbar?.hideSettings && <div className="relative" ref={settingsRef}>
               <button
@@ -600,6 +633,18 @@ export default function AppLayout() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       Meu perfil
+                    </button>
+                  )}
+                  {payload?.role === 'professor' && (
+                    <button
+                      type="button"
+                      onClick={() => { setSettingsOpen(false); navigate('/app/plan'); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      Plano
                     </button>
                   )}
                   <div className="border-t mx-2 my-1" />

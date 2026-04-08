@@ -6,6 +6,7 @@ import GraphPage from './pages/GraphPage';
 import ResearcherPage from './pages/ResearcherPage';
 import RemindersPage from './pages/RemindersPage';
 import ManualPage from './pages/ManualPage';
+import ManualDetailPage from './pages/ManualDetailPage';
 import DeadlinesPage from './pages/DeadlinesPage';
 import AdminPage from './pages/AdminPage';
 import InstitutionPage from './pages/InstitutionPage';
@@ -14,6 +15,7 @@ import LandingPage from './pages/LandingPage';
 import ReadingsPage from './pages/ReadingsPage';
 import MilestonesPage from './pages/MilestonesPage';
 import NotesPage from './pages/NotesPage';
+import PlanPage from './pages/PlanPage';
 
 
 export default function App() {
@@ -38,6 +40,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ManualPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="manual/:id"
+          element={
+            <ProtectedRoute>
+              <ManualDetailPage />
             </ProtectedRoute>
           }
         />
@@ -86,6 +96,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DeadlinesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="plan"
+          element={
+            <ProtectedRoute>
+              <PlanPage />
             </ProtectedRoute>
           }
         />

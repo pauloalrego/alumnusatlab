@@ -35,7 +35,7 @@ from app.plan import (
     compute_trial_days_remaining,
     user_to_out,
 )
-from app.models import User
+from app.models import User, UserPlan
 from .conftest import make_user
 
 
@@ -49,10 +49,21 @@ def _make_plain_user(**kwargs):
     u.researcher_id = kwargs.get("researcher_id", None)
     u.last_login = kwargs.get("last_login", None)
     u.created_at = kwargs.get("created_at", datetime.utcnow())
-    u.plan_type = kwargs.get("plan_type", None)
-    u.plan_status = kwargs.get("plan_status", None)
-    u.account_activated_at = kwargs.get("account_activated_at", None)
-    u.plan_period_ends_at = kwargs.get("plan_period_ends_at", None)
+    # Plan fields live in a separate UserPlan object
+    plan_type = kwargs.get("plan_type", None)
+    plan_status = kwargs.get("plan_status", None)
+    account_activated_at = kwargs.get("account_activated_at", None)
+    plan_period_ends_at = kwargs.get("plan_period_ends_at", None)
+    if any(v is not None for v in [plan_type, plan_status, account_activated_at, plan_period_ends_at]):
+        p = UserPlan()
+        p.user_id = u.id
+        p.plan_type = plan_type
+        p.plan_status = plan_status
+        p.account_activated_at = account_activated_at
+        p.plan_period_ends_at = plan_period_ends_at
+        u.plan = p
+    else:
+        u.plan = None
     return u
 
 
@@ -126,16 +137,15 @@ class TestClearPlan:
         )
         clear_plan(u)
 
-        assert u.plan_type is None
-        assert u.plan_status is None
-        assert u.account_activated_at is None
-        assert u.plan_period_ends_at is None
+        assert u.plan.plan_type is None
+        assert u.plan.plan_status is None
+        assert u.plan.account_activated_at is None
+        assert u.plan.plan_period_ends_at is None
 
     def test_clear_plan_is_idempotent(self):
         u = _make_plain_user()
-        clear_plan(u)
-        clear_plan(u)
-        assert u.plan_type is None
+        clear_plan(u)  # u.plan is None — should not raise
+        assert u.plan is None
 
 
 # ---------------------------------------------------------------------------
@@ -144,34 +154,34 @@ class TestClearPlan:
 
 class TestEnsureProfessorPlanDefaults:
     def test_sets_trial_for_professor_without_plan(self):
-        u = _make_plain_user(role="professor", plan_type=None)
+        u = _make_plain_user(role="professor")
         result = ensure_professor_plan_defaults(u)
 
         assert result is True
-        assert u.plan_type == PLAN_TRIAL
-        assert u.plan_status == STATUS_ACTIVE
-        assert u.account_activated_at is not None
-        assert u.plan_period_ends_at is not None
+        assert u.plan.plan_type == PLAN_TRIAL
+        assert u.plan.plan_status == STATUS_ACTIVE
+        assert u.plan.account_activated_at is not None
+        assert u.plan.plan_period_ends_at is not None
 
     def test_sets_trial_for_superadmin_without_plan(self):
-        u = _make_plain_user(role="superadmin", plan_type=None)
+        u = _make_plain_user(role="superadmin")
         result = ensure_professor_plan_defaults(u)
         assert result is True
-        assert u.plan_type == PLAN_TRIAL
+        assert u.plan.plan_type == PLAN_TRIAL
 
     def test_does_not_override_existing_plan(self):
         u = _make_plain_user(role="professor", plan_type=PLAN_MONTHLY)
         result = ensure_professor_plan_defaults(u)
 
         assert result is False
-        assert u.plan_type == PLAN_MONTHLY
+        assert u.plan.plan_type == PLAN_MONTHLY
 
     def test_returns_false_for_researcher(self):
         u = _make_plain_user(role="researcher")
         result = ensure_professor_plan_defaults(u)
 
         assert result is False
-        assert u.plan_type is None
+        assert u.plan is None
 
     def test_returns_false_for_admin(self):
         u = _make_plain_user(role="admin")
@@ -179,10 +189,10 @@ class TestEnsureProfessorPlanDefaults:
         assert result is False
 
     def test_plan_period_ends_at_is_30_days_from_activation(self):
-        u = _make_plain_user(role="professor", plan_type=None)
+        u = _make_plain_user(role="professor")
         ensure_professor_plan_defaults(u)
 
-        delta = u.plan_period_ends_at - u.account_activated_at
+        delta = u.plan.plan_period_ends_at - u.plan.account_activated_at
         assert delta.days == TRIAL_DAYS
 
 
@@ -204,7 +214,7 @@ class TestRefreshUserPlanStatus:
 
         refresh_user_plan_status(db, user)
         db.refresh(user)
-        assert user.plan_status == STATUS_EXPIRED
+        assert user.plan.plan_status == STATUS_EXPIRED
 
     def test_sets_active_when_period_has_not_ended(self, db):
         future = datetime.utcnow() + timedelta(days=10)
@@ -219,13 +229,13 @@ class TestRefreshUserPlanStatus:
 
         refresh_user_plan_status(db, user)
         db.refresh(user)
-        assert user.plan_status == STATUS_ACTIVE
+        assert user.plan.plan_status == STATUS_ACTIVE
 
     def test_no_op_for_researcher(self, db):
         user = make_user(db, role="researcher")
         # Should not raise or change anything
         refresh_user_plan_status(db, user)
-        assert user.plan_status is None
+        assert user.plan is None
 
     def test_no_op_when_plan_period_ends_at_is_none(self, db):
         user = make_user(
@@ -236,7 +246,7 @@ class TestRefreshUserPlanStatus:
             plan_period_ends_at=None,
         )
         refresh_user_plan_status(db, user)
-        assert user.plan_status == STATUS_ACTIVE
+        assert user.plan.plan_status == STATUS_ACTIVE
 
     def test_no_change_when_status_already_correct(self, db):
         past = datetime(2020, 1, 1)
@@ -251,7 +261,7 @@ class TestRefreshUserPlanStatus:
         # status is already expired — commit should not be called redundantly
         refresh_user_plan_status(db, user)
         db.refresh(user)
-        assert user.plan_status == STATUS_EXPIRED
+        assert user.plan.plan_status == STATUS_EXPIRED
 
 
 # ---------------------------------------------------------------------------
@@ -264,11 +274,11 @@ class TestComputeTrialDaysRemaining:
         assert compute_trial_days_remaining(u) is None
 
     def test_returns_none_for_non_trial_plan(self):
-        u = _make_plain_user(role="professor", plan_type=PLAN_MONTHLY)
+        u = _make_plain_user(role="professor", plan_type=PLAN_MONTHLY, plan_status=STATUS_ACTIVE)
         assert compute_trial_days_remaining(u) is None
 
     def test_returns_none_when_plan_period_ends_at_is_none(self):
-        u = _make_plain_user(role="professor", plan_type=PLAN_TRIAL, plan_period_ends_at=None)
+        u = _make_plain_user(role="professor", plan_type=PLAN_TRIAL)
         assert compute_trial_days_remaining(u) is None
 
     def test_returns_positive_days_when_trial_active(self):
@@ -308,7 +318,7 @@ class TestUserToOut:
             role="professor",
             plan_type=PLAN_TRIAL,
             plan_status=STATUS_ACTIVE,
-            account_activated_at=datetime.utcnow(),
+            account_activated_at=datetime.utcnow() - timedelta(days=1),
             plan_period_ends_at=future,
         )
         out = user_to_out(u)

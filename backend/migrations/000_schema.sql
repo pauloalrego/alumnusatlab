@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS institutions (
     id         SERIAL PRIMARY KEY,
     name       VARCHAR(255) NOT NULL,
     domain     VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS professors (
@@ -29,7 +30,8 @@ CREATE TABLE IF NOT EXISTS research_groups (
     id             SERIAL PRIMARY KEY,
     name           VARCHAR(255) NOT NULL,
     institution_id INTEGER REFERENCES institutions(id),
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS professor_groups (
@@ -48,7 +50,6 @@ CREATE TABLE IF NOT EXISTS researchers (
     email           VARCHAR(255),
     group_id        INTEGER REFERENCES research_groups(id) ON DELETE SET NULL,
     orientador_id   INTEGER REFERENCES professors(id) ON DELETE SET NULL,
-    observacoes     TEXT,
     ativo           BOOLEAN NOT NULL DEFAULT TRUE,
     registered      BOOLEAN NOT NULL DEFAULT FALSE,
     matricula       VARCHAR(50),
@@ -67,32 +68,41 @@ CREATE TABLE IF NOT EXISTS relationships (
 );
 
 CREATE TABLE IF NOT EXISTS users (
+    id              SERIAL PRIMARY KEY,
+    email           VARCHAR(255) UNIQUE NOT NULL,
+    nome            VARCHAR(255) NOT NULL,
+    password_hash   VARCHAR(255) NOT NULL,
+    role            VARCHAR(20)  NOT NULL,
+    is_admin        BOOLEAN NOT NULL DEFAULT FALSE,
+    professor_id    INTEGER REFERENCES professors(id) ON DELETE SET NULL,
+    researcher_id   INTEGER REFERENCES researchers(id) ON DELETE SET NULL,
+    last_login      TIMESTAMPTZ,
+    photo_url       VARCHAR(500),
+    photo_thumb_url VARCHAR(500),
+    lattes_url      VARCHAR(500),
+    scholar_url     VARCHAR(500),
+    linkedin_url    VARCHAR(500),
+    github_url      VARCHAR(500),
+    instagram_url   VARCHAR(50),
+    twitter_url     VARCHAR(50),
+    whatsapp        VARCHAR(20),
+    interesses      TEXT,
+    bio             TEXT,
+    birth_date      DATE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS user_plans (
     id                   SERIAL PRIMARY KEY,
-    email                VARCHAR(255) UNIQUE NOT NULL,
-    nome                 VARCHAR(255) NOT NULL,
-    password_hash        VARCHAR(255) NOT NULL,
-    role                 VARCHAR(20)  NOT NULL,
-    is_admin             BOOLEAN NOT NULL DEFAULT FALSE,
-    professor_id         INTEGER REFERENCES professors(id) ON DELETE SET NULL,
-    researcher_id        INTEGER REFERENCES researchers(id) ON DELETE SET NULL,
-    last_login           TIMESTAMPTZ,
+    user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plan_type            VARCHAR(20),
     plan_status          VARCHAR(20),
     account_activated_at TIMESTAMPTZ,
     plan_period_ends_at  TIMESTAMPTZ,
-    photo_url            VARCHAR(500),
-    photo_thumb_url      VARCHAR(500),
-    lattes_url           VARCHAR(500),
-    scholar_url          VARCHAR(500),
-    linkedin_url         VARCHAR(500),
-    github_url           VARCHAR(500),
-    instagram_url        VARCHAR(50),
-    twitter_url          VARCHAR(50),
-    whatsapp             VARCHAR(20),
-    interesses           TEXT,
-    bio                  TEXT,
-    birth_date           DATE,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS notes (
@@ -103,7 +113,8 @@ CREATE TABLE IF NOT EXISTS notes (
     file_url       VARCHAR(500),
     file_name      VARCHAR(255),
     created_by_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS file_uploads (
@@ -128,7 +139,8 @@ CREATE TABLE IF NOT EXISTS reminders (
     done           BOOLEAN NOT NULL DEFAULT FALSE,
     created_by_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
     institution_id INTEGER REFERENCES institutions(id) ON DELETE SET NULL,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS tips (
@@ -138,7 +150,8 @@ CREATE TABLE IF NOT EXISTS tips (
     author_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
     institution_id INTEGER REFERENCES institutions(id) ON DELETE SET NULL,
     position       INTEGER NOT NULL DEFAULT 0,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS tip_votes (
@@ -152,7 +165,8 @@ CREATE TABLE IF NOT EXISTS tip_comments (
     entry_id   INTEGER NOT NULL REFERENCES tips(id) ON DELETE CASCADE,
     text       TEXT NOT NULL,
     author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS deadlines (
@@ -160,9 +174,11 @@ CREATE TABLE IF NOT EXISTS deadlines (
     label          VARCHAR(255) NOT NULL,
     url            TEXT         NOT NULL,
     date           DATE         NOT NULL,
+    abstract_date  DATE,
     institution_id INTEGER REFERENCES institutions(id) ON DELETE CASCADE,
     created_by_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS deadline_interests (
@@ -181,7 +197,8 @@ CREATE TABLE IF NOT EXISTS milestones (
     date          DATE         NOT NULL,
     description   TEXT,
     created_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS readings (

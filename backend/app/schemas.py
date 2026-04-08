@@ -90,7 +90,6 @@ class ResearcherCreate(BaseModel):
     status: str
     orientador_id: Optional[int] = None  # FK → professors.id
     group_id: Optional[int] = None
-    observacoes: Optional[str] = None
     institution_id: Optional[int] = None
 
     @field_validator("email")
@@ -115,7 +114,6 @@ class ResearcherUpdate(BaseModel):
     status: Optional[str] = None
     orientador_id: Optional[int] = None  # FK → professors.id
     group_id: Optional[int] = None
-    observacoes: Optional[str] = None
     ativo: Optional[bool] = None
     matricula: Optional[str] = None
     curso: Optional[str] = None
@@ -130,7 +128,6 @@ class ResearcherOut(BaseModel):
     group_id: Optional[int] = None
     orientador_id: Optional[int] = None
     orientador_nome: Optional[str] = None
-    observacoes: Optional[str]
     ativo: bool
     registered: bool
     matricula: Optional[str]
@@ -247,9 +244,11 @@ class UserOut(BaseModel):
     instagram_url:   Optional[str] = None
     twitter_url:     Optional[str] = None
     whatsapp:        Optional[str] = None
-    interesses:      Optional[str] = None
-    bio:             Optional[str] = None
-    birth_date:      Optional[date] = None
+    interesses:        Optional[str] = None
+    bio:               Optional[str] = None
+    birth_date:        Optional[date] = None
+    institution_id:    Optional[int] = None
+    institution_name:  Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -524,6 +523,7 @@ class ReadingOut(BaseModel):
     status: str
     summary: Optional[str] = None
     created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     status_history: list[ReadingStatusHistoryOut] = []
@@ -533,6 +533,7 @@ class ReadingOut(BaseModel):
     @classmethod
     def from_orm_with_history(cls, reading):
         obj = cls.model_validate(reading)
+        obj.created_by_name = reading.created_by.nome if reading.created_by else None
         obj.status_history = [
             ReadingStatusHistoryOut(
                 id=h.id,

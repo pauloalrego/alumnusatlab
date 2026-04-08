@@ -27,6 +27,18 @@ def list_tips(
     return [TipOut.from_orm_with_context(e, current_user.id) for e in entries]
 
 
+@router.get("/{entry_id}", response_model=TipOut)
+def get_tip(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    entry = tip_service.get_tip_full(db, entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return TipOut.from_orm_with_context(entry, current_user.id)
+
+
 @router.post("/", response_model=TipOut)
 def create_tip(
     data: TipCreate,
