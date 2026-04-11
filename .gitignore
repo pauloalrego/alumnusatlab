@@ -16,3 +16,5 @@ backend/.coverage
 .pytest_cache/
 .coverage
 .tmp_cloc_help.txt
+.DS_Store
+memory/

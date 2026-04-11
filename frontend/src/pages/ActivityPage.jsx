@@ -15,6 +15,7 @@ const ACTION_LABELS = {
   milestone_updated: 'atualizou um marco',
   note_created: 'adicionou uma nota',
   note_updated: 'editou uma nota',
+  login: 'acessou a plataforma',
 };
 
 const ACTION_CATEGORY = {
@@ -24,18 +25,21 @@ const ACTION_CATEGORY = {
   milestone_updated: 'milestone',
   note_created: 'note',
   note_updated: 'note',
+  login: 'login',
 };
 
 const CATEGORY_LABELS = {
   reading: 'Leituras',
   milestone: 'Marcos',
   note: 'Notas',
+  login: 'Acessos',
 };
 
 const CATEGORY_COLORS = {
   reading: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', accent: 'text-blue-600', iconBg: 'bg-blue-100' },
   milestone: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', accent: 'text-green-600', iconBg: 'bg-green-100' },
   note: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', accent: 'text-purple-600', iconBg: 'bg-purple-100' },
+  login: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', accent: 'text-amber-600', iconBg: 'bg-amber-100' },
 };
 
 const ACTION_COLORS = {
@@ -45,6 +49,7 @@ const ACTION_COLORS = {
   milestone_updated: 'bg-emerald-100 text-emerald-600',
   note_created: 'bg-purple-100 text-purple-600',
   note_updated: 'bg-violet-100 text-violet-600',
+  login: 'bg-amber-100 text-amber-600',
 };
 
 const CATEGORY_ICONS = {
@@ -61,6 +66,11 @@ const CATEGORY_ICONS = {
   note: (
     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+    </svg>
+  ),
+  login: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
     </svg>
   ),
 };
@@ -82,6 +92,11 @@ const ACTION_ICONS = {
   note_updated: (
     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
+  login: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
     </svg>
   ),
 };
@@ -245,7 +260,7 @@ export default function ActivityPage() {
       if (periodMs !== Infinity && now - new Date(e.created_at).getTime() > periodMs) return false;
       return true;
     });
-    const counts = { reading: 0, milestone: 0, note: 0 };
+    const counts = { reading: 0, milestone: 0, note: 0, login: 0 };
     for (const e of base) {
       const cat = ACTION_CATEGORY[e.action];
       if (cat) counts[cat]++;
@@ -288,8 +303,8 @@ export default function ActivityPage() {
         ) : (
           <>
             {/* Cards de resumo */}
-            <div className="grid grid-cols-3 gap-3">
-              {['reading', 'milestone', 'note'].map(cat => (
+            <div className="grid grid-cols-4 gap-3">
+              {['reading', 'milestone', 'note', 'login'].map(cat => (
                 <StatCard
                   key={cat}
                   category={cat}

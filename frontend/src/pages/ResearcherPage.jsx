@@ -12,6 +12,7 @@ import { slugify } from '../mentionUtils.jsx';
 import RichEditor from '../components/RichEditor';
 import RichContent from '../components/RichContent';
 import { useConfirm } from '../components/ConfirmModal';
+import ActivitySummary from '../components/ActivitySummary';
 
 const STATUS_LABELS = { graduacao: 'Graduação', mestrado: 'Mestrado', doutorado: 'Doutorado', postdoc: 'Pós-doc', professor: 'Professor', egresso: 'Egresso' };
 const STATUS_COLORS = { graduacao: '#3B82F6', mestrado: '#F59E0B', doutorado: '#10B981', postdoc: '#06B6D4', professor: '#7C3AED', egresso: '#6B7280' };
@@ -790,6 +791,9 @@ export default function ResearcherPage() {
           </div>
         )}
         <ProfileSection researcher={researcher} user={researcherUser} canEdit={canEdit} isProfessor={isProfessor} isOwnProfile={isOwnProfile} onSaved={() => { load(); loadData?.(); }} myDeadlines={myDeadlines} />
+        {isProfessor && researcherUser && (
+          <ActivitySummary userId={researcherUser.id} userName={researcherUser.nome} />
+        )}
         {researcherUser && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ReadingList

@@ -186,6 +186,19 @@ def generate_events(researchers, professors):
                     "created_at": random_time_in_last_days(8),
                 })
 
+        # -- Logins --
+        num_logins = random.randint(5, 15)
+        for _ in range(num_logins):
+            events.append({
+                "actor_id": user_id,
+                "target_user_id": user_id,
+                "action": "login",
+                "entity_type": "user",
+                "entity_id": user_id,
+                "metadata_json": None,
+                "created_at": random_time_in_last_days(30),
+            })
+
     # Ordena por data
     events.sort(key=lambda e: e["created_at"])
     return events
