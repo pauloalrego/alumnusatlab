@@ -55,6 +55,22 @@ async def create_note(
     return NoteOut.from_orm_with_creator(note)
 
 
+@router.put("/notes/{note_id}", response_model=NoteOut)
+def update_note(
+    note_id: int,
+    text: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    note = note_service.get_by_id(db, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if current_user.role not in ("professor", "admin", "superadmin") and note.created_by_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Sem permissão para editar esta anotação")
+    note = note_service.update(db, note, text)
+    return NoteOut.from_orm_with_creator(note)
+
+
 @router.delete("/notes/{note_id}", status_code=204)
 def delete_note(
     note_id: int,

@@ -437,6 +437,18 @@ export function SidebarRail({ researchers, onExpand, onLogout, currentUser = nul
         >
           {BOOK_ICON}
         </Link>
+
+        {(role === 'professor' || role === 'superadmin') && (
+          <Link
+            to="/app/activity"
+            title="Atividade dos orientandos"
+            className="w-11 h-11 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors shrink-0"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </Link>
+        )}
       </div>
 
       <div className="shrink-0 py-2.5 flex justify-center border-t border-gray-200/80 bg-white">
@@ -675,6 +687,19 @@ export default function Sidebar({ researchers, onRefresh, role, isAdmin = false,
           <span className="bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5 leading-none shrink-0">{sidebarTipCount}</span>
         )}
       </Link>
+
+      {/* Atividade dos orientandos (apenas professor) */}
+      {(role === 'professor' || role === 'superadmin') && (
+        <Link
+          to="/app/activity"
+          className="w-full flex items-center gap-2 bg-white border rounded-lg px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <span className="flex-1">Atividade dos Orientandos</span>
+        </Link>
+      )}
 
     </div>
   );

@@ -301,6 +301,24 @@ class User(Base):
         return f"/api/files/{self.photo_thumb_file_id}" if self.photo_thumb_file_id else None
 
 
+# ── Eventos de atividade ─────────────────────────────────────────────────────
+
+class ActivityEvent(Base):
+    __tablename__ = "activity_events"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    actor_id       = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    target_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    action         = Column(String(50), nullable=False)
+    entity_type    = Column(String(50), nullable=True)
+    entity_id      = Column(Integer, nullable=True)
+    metadata_json  = Column(JSON, nullable=True)
+    created_at     = Column(DateTime, default=datetime.utcnow, server_default="now()")
+
+    actor       = relationship("User", foreign_keys=[actor_id])
+    target_user = relationship("User", foreign_keys=[target_user_id])
+
+
 # ── Upload de arquivos ────────────────────────────────────────────────────────
 
 class FileUpload(Base):

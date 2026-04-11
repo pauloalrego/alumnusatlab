@@ -66,6 +66,18 @@ export const getNotes = (userId, institutionId) =>
   request(`/users/${userId}/notes${institutionId ? `?institution_id=${institutionId}` : ''}`);
 export const deleteNote = (noteId) => request(`/notes/${noteId}`, { method: 'DELETE' });
 
+export async function updateNote(noteId, text) {
+  const form = new FormData();
+  form.append('text', text);
+  const token = getToken();
+  const res = await fetch(`/api/notes/${noteId}`, {
+    method: 'PUT',
+    body: form,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return res.json();
+}
+
 export async function createNote(userId, text, file, institutionId) {
   const form = new FormData();
   form.append('text', text);
@@ -185,6 +197,10 @@ export const deleteUser = (id) => request(`/admin/users/${id}`, { method: 'DELET
 export const deletePendingResearcher = (id) => request(`/admin/researchers/${id}`, { method: 'DELETE' });
 export const bulkDeleteUsers = (user_ids, researcher_ids) => request('/admin/bulk-delete', { method: 'POST', body: JSON.stringify({ user_ids, researcher_ids }) });
 export const inviteProfessor = (data) => request('/admin/invite-professor', { method: 'POST', body: JSON.stringify(data) });
+
+// Activity
+export const getMyResearchersActivity = (limit = 100) => request(`/activity/my-researchers?limit=${limit}`);
+export const getUserActivity = (userId, limit = 50) => request(`/activity/user/${userId}?limit=${limit}`);
 
 // Milestones
 export const getMilestones      = (userId) => request(`/users/${userId}/milestones/`);

@@ -189,7 +189,13 @@ export default function RichEditor({
             </>
           )}
           {variant === 'simple' && (
-            <span className="text-xs text-gray-400 ml-1">@ para mencionar</span>
+            <>
+              <Divider />
+              <ToolbarBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} title="Lista">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+              </ToolbarBtn>
+              <span className="text-xs text-gray-400 ml-1">@ para mencionar</span>
+            </>
           )}
         </div>
       )}

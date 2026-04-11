@@ -7,6 +7,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session, joinedload
 
 from ..models import Reading, ReadingStatusHistory
+from ..services import activity_service
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +49,33 @@ def create(db: Session, user_id: int, url: str, created_by_id: int | None) -> Re
     db.add(reading)
     db.flush()
     _record_history(db, reading.id, "quero_ler", created_by_id)
+    activity_service.log(
+        db,
+        actor_id=created_by_id or user_id,
+        target_user_id=user_id,
+        action="reading_created",
+        entity_type="reading",
+        entity_id=reading.id,
+        metadata={"url": url},
+    )
     db.commit()
     db.refresh(reading)
     return reading
 
 
 def update_status(db: Session, reading: Reading, new_status: str, changed_by_id: int | None) -> Reading:
+    old_status = reading.status
     reading.status = new_status
     _record_history(db, reading.id, new_status, changed_by_id)
+    activity_service.log(
+        db,
+        actor_id=changed_by_id or reading.user_id,
+        target_user_id=reading.user_id,
+        action="reading_status_changed",
+        entity_type="reading",
+        entity_id=reading.id,
+        metadata={"from": old_status, "to": new_status},
+    )
     db.commit()
     db.refresh(reading)
     return reading

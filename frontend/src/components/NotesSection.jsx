@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { getNotes, createNote, deleteNote } from '../api';
+import { getNotes, createNote, deleteNote, updateNote } from '../api';
 import { modKey } from '../platform';
 import Toast from './Toast';
 import { slugify } from '../mentionUtils.jsx';
@@ -18,6 +18,9 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
   const [text, setText] = useState('');
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
   const [toast, setToast] = useState('');
   const { confirm, modal: confirmModal } = useConfirm();
   const fileRef = useRef();
@@ -52,6 +55,27 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
     if (fileRef.current) fileRef.current.value = '';
     setSaving(false);
     setToast('Anotação adicionada');
+    load();
+  }
+
+  function startEdit(note) {
+    setEditingId(note.id);
+    setEditText(note.text);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditText('');
+  }
+
+  async function handleEditSubmit(noteId) {
+    if (!editText.trim()) return;
+    setEditSaving(true);
+    await updateNote(noteId, editText);
+    setEditingId(null);
+    setEditText('');
+    setEditSaving(false);
+    setToast('Anotação atualizada');
     load();
   }
 
@@ -195,16 +219,44 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
                     </div>
                   </div>
                   {(isProfessor || note.created_by_id === currentUserId) && (
-                    <button onClick={() => handleDelete(note.id)} title="Remover anotação" className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => startEdit(note)} title="Editar anotação" className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button onClick={() => handleDelete(note.id)} title="Remover anotação" className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
                 {/* Corpo */}
                 <div className="px-5 py-5 bg-gray-50 border-t border-gray-100">
-                  <RichContent html={note.text} researchers={researchers} className="text-sm text-gray-700 leading-relaxed" />
+                  {editingId === note.id ? (
+                    <div className="space-y-2">
+                      <RichEditor
+                        variant="simple"
+                        researchers={researchers}
+                        value={editText}
+                        onChange={setEditText}
+                        onSubmit={() => handleEditSubmit(note.id)}
+                        placeholder="Editar anotação..."
+                      />
+                      <div className="flex items-center gap-2 justify-end">
+                        <button type="button" onClick={cancelEdit} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100">
+                          Cancelar
+                        </button>
+                        <button type="button" onClick={() => handleEditSubmit(note.id)} disabled={editSaving || !editText.trim()} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+                          {editSaving ? 'Salvando...' : 'Salvar'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <RichContent html={note.text} researchers={researchers} className="text-sm text-gray-700 leading-relaxed" />
+                  )}
                   {note.file_url && (
                     <a href={note.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-xs text-blue-600 hover:underline">
                       <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

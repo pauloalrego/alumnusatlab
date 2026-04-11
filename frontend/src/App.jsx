@@ -16,6 +16,7 @@ import ReadingsPage from './pages/ReadingsPage';
 import MilestonesPage from './pages/MilestonesPage';
 import NotesPage from './pages/NotesPage';
 import PlanPage from './pages/PlanPage';
+import ActivityPage from './pages/ActivityPage';
 
 
 export default function App() {
@@ -104,6 +105,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PlanPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="activity"
+          element={
+            <ProtectedRoute>
+              <ActivityPage />
             </ProtectedRoute>
           }
         />

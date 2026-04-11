@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..models import User
 from ..schemas import RegisterRequest
+from ..services import activity_service
 
 logger = logging.getLogger(__name__)
 
@@ -68,4 +69,12 @@ def authenticate(
 
 def record_login(db: Session, user: User) -> None:
     user.last_login = datetime.utcnow()
+    activity_service.log(
+        db,
+        actor_id=user.id,
+        target_user_id=user.id,
+        action="login",
+        entity_type="user",
+        entity_id=user.id,
+    )
     db.commit()

@@ -10,4 +10,5 @@ export const keys = {
   professors: ()       => ['professors'],
   adminStats: ()       => ['adminStats'],
   adminUsers: ()       => ['adminUsers'],
+  activity:   ()       => ['activity'],
 };

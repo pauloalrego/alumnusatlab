@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Milestone
 from ..schemas import MilestoneCreate, MilestoneUpdate
+from ..services import activity_service
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,16 @@ def create(db: Session, user_id: int, data: MilestoneCreate, created_by_id: int 
         **data.model_dump(),
     )
     db.add(m)
+    db.flush()
+    activity_service.log(
+        db,
+        actor_id=created_by_id or user_id,
+        target_user_id=user_id,
+        action="milestone_created",
+        entity_type="milestone",
+        entity_id=m.id,
+        metadata={"title": data.title, "type": data.type},
+    )
     db.commit()
     db.refresh(m)
     logger.info("Milestone created: id=%s user_id=%s", m.id, user_id)
@@ -37,6 +48,15 @@ def create(db: Session, user_id: int, data: MilestoneCreate, created_by_id: int 
 def update(db: Session, milestone: Milestone, data: MilestoneUpdate) -> Milestone:
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(milestone, key, value)
+    activity_service.log(
+        db,
+        actor_id=milestone.user_id,
+        target_user_id=milestone.user_id,
+        action="milestone_updated",
+        entity_type="milestone",
+        entity_id=milestone.id,
+        metadata={"title": milestone.title},
+    )
     db.commit()
     db.refresh(milestone)
     return milestone

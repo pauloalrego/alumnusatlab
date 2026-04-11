@@ -545,3 +545,27 @@ class ReadingOut(BaseModel):
             for h in reading.status_history
         ]
         return obj
+
+
+# --- Activity ---
+
+class ActivityEventOut(BaseModel):
+    id: int
+    actor_id: int
+    actor_name: Optional[str] = None
+    target_user_id: int
+    target_user_name: Optional[str] = None
+    action: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    metadata_json: Optional[dict] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_orm_with_names(cls, event):
+        obj = cls.model_validate(event)
+        obj.actor_name = event.actor.nome if event.actor else None
+        obj.target_user_name = event.target_user.nome if event.target_user else None
+        return obj
