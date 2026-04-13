@@ -30,12 +30,13 @@ def log(
     db.add(event)
 
 
-def list_by_target_user(db: Session, user_id: int, limit: int = 50) -> list[ActivityEvent]:
+def list_by_target_user(db: Session, user_id: int, limit: int = 50, offset: int = 0) -> list[ActivityEvent]:
     return (
         db.query(ActivityEvent)
         .options(joinedload(ActivityEvent.actor))
         .filter(ActivityEvent.target_user_id == user_id)
         .order_by(ActivityEvent.created_at.desc())
+        .offset(offset)
         .limit(limit)
         .all()
     )

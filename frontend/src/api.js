@@ -211,7 +211,7 @@ export const inviteProfessor = (data) => request('/admin/invite-professor', { me
 
 // Activity
 export const getMyResearchersActivity = (limit = 100) => request(`/activity/my-researchers?limit=${limit}`);
-export const getUserActivity = (userId, limit = 50) => request(`/activity/user/${userId}?limit=${limit}`);
+export const getUserActivity = (userId, limit = 50, offset = 0) => request(`/activity/user/${userId}?limit=${limit}&offset=${offset}`);
 export const getUserStats = (userId) => request(`/activity/user/${userId}/stats`);
 
 // Milestones

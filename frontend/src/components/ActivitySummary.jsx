@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getUserActivity, getUserStats } from '../api';
@@ -11,8 +11,8 @@ const ACTION_LABELS = {
   reading_status_changed: 'atualizou status de leitura',
   milestone_created: 'criou um marco',
   milestone_updated: 'atualizou um marco',
-  note_created: 'adicionou uma nota',
-  note_updated: 'editou uma nota',
+  note_created: 'adicionou uma anotação',
+  note_updated: 'editou uma anotação',
   login: 'acessou a plataforma',
 };
 
@@ -92,20 +92,13 @@ function formatFullDate(iso) {
 }
 
 function computeStats(events) {
+  const lastLogin = events.find(e => e.action === 'login');
   const now = Date.now();
   const thirtyDays = 30 * 86400000;
   const recent = events.filter(e => now - new Date(e.created_at).getTime() < thirtyDays);
-
-  const readings = recent.filter(e => e.action === 'reading_created').length;
   const readingsCompleted = recent.filter(e => e.action === 'reading_status_changed' && e.metadata_json?.to === 'lido').length;
-  const milestones = recent.filter(e => e.action === 'milestone_created').length;
-  const notes = recent.filter(e => e.action === 'note_created').length;
-  const logins = recent.filter(e => e.action === 'login').length;
 
-  const lastLogin = events.find(e => e.action === 'login');
-  const lastAction = events.find(e => e.action !== 'login');
-
-  return { readings, readingsCompleted, milestones, notes, logins, lastLogin, lastAction, total: recent.length };
+  return { readingsCompleted, lastLogin };
 }
 
 function renderDetail(event) {
@@ -149,21 +142,19 @@ function Indicator({ label, value, sublabel, color = 'text-gray-800', icon }) {
   );
 }
 
-function EngagementBar({ stats }) {
-  const lastLoginDays = stats.lastLogin ? daysAgo(stats.lastLogin.created_at) : null;
-  const lastActionDays = stats.lastAction ? daysAgo(stats.lastAction.created_at) : null;
+function EngagementBar({ score, lastLoginDays }) {
 
   let engagementLevel, engagementColor, engagementLabel;
-  if (lastActionDays === null) {
+  if (score === 0) {
     engagementLevel = 0; engagementColor = 'bg-gray-300'; engagementLabel = 'Sem atividade';
-  } else if (lastActionDays <= 3) {
-    engagementLevel = 4; engagementColor = 'bg-green-500'; engagementLabel = 'Ativo';
-  } else if (lastActionDays <= 7) {
-    engagementLevel = 3; engagementColor = 'bg-blue-500'; engagementLabel = 'Regular';
-  } else if (lastActionDays <= 14) {
-    engagementLevel = 2; engagementColor = 'bg-amber-500'; engagementLabel = 'Pouco ativo';
-  } else {
+  } else if (score < 20) {
     engagementLevel = 1; engagementColor = 'bg-red-500'; engagementLabel = 'Inativo';
+  } else if (score < 45) {
+    engagementLevel = 2; engagementColor = 'bg-amber-500'; engagementLabel = 'Pouco ativo';
+  } else if (score < 70) {
+    engagementLevel = 3; engagementColor = 'bg-blue-500'; engagementLabel = 'Regular';
+  } else {
+    engagementLevel = 4; engagementColor = 'bg-green-500'; engagementLabel = 'Ativo';
   }
 
   return (
@@ -177,7 +168,7 @@ function EngagementBar({ stats }) {
         <p className="text-xs font-semibold text-gray-700">{engagementLabel}</p>
         <p className="text-[10px] text-gray-400">
           {lastLoginDays !== null
-            ? (lastLoginDays === 0 ? 'Acessou hoje' : lastLoginDays === 1 ? 'Acessou ontem' : `Acessou ha ${lastLoginDays}d`)
+            ? (lastLoginDays <= 0 ? 'Acessou hoje' : lastLoginDays === 1 ? 'Acessou ontem' : `Acessou ha ${lastLoginDays}d`)
             : 'Nunca acessou'}
         </p>
       </div>
@@ -187,15 +178,36 @@ function EngagementBar({ stats }) {
 
 /* ── Componente principal ───────────────────────────────────────────────────── */
 
-export default function ActivitySummary({ userId, userName }) {
-  const [expanded, setExpanded] = useState(false);
+const PAGE_INITIAL = 5;
+const PAGE_SIZE = 10;
 
-  const { data: events = [], isLoading } = useQuery({
+export default function ActivitySummary({ userId, userName }) {
+  const [showHelp, setShowHelp] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const initialLoaded = useRef(false);
+
+  const { isLoading } = useQuery({
     queryKey: ['activity', 'user', userId],
-    queryFn: () => getUserActivity(userId, 100),
+    queryFn: async () => {
+      const data = await getUserActivity(userId, PAGE_INITIAL, 0);
+      setEvents(data);
+      setHasMore(data.length === PAGE_INITIAL);
+      initialLoaded.current = true;
+      return data;
+    },
     staleTime: 30_000,
     enabled: !!userId,
   });
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const data = await getUserActivity(userId, PAGE_SIZE, events.length);
+    setEvents(prev => [...prev, ...data]);
+    setHasMore(data.length === PAGE_SIZE);
+    setLoadingMore(false);
+  }
 
   const { data: dbStats } = useQuery({
     queryKey: ['activity', 'user', userId, 'stats'],
@@ -220,9 +232,6 @@ export default function ActivitySummary({ userId, userName }) {
 
   const stats = computeStats(events);
   const nonLoginEvents = events.filter(e => e.action !== 'login');
-  const previewEvents = nonLoginEvents.slice(0, 5);
-  const expandedEvents = nonLoginEvents.slice(0, 30);
-  const displayEvents = expanded ? expandedEvents : previewEvents;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -235,15 +244,46 @@ export default function ActivitySummary({ userId, userName }) {
           <h3 className="text-sm font-semibold text-gray-800">Engajamento</h3>
           <span className="text-[10px] text-gray-400 font-normal">ultimos 30 dias</span>
         </div>
-        <EngagementBar stats={stats} />
+        <div className="flex items-center gap-3">
+          <EngagementBar
+            score={dbStats?.engagement_score ?? 0}
+            lastLoginDays={stats.lastLogin ? daysAgo(stats.lastLogin.created_at) : null}
+          />
+          <button
+            type="button"
+            onClick={() => setShowHelp(h => !h)}
+            className="w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-blue-600 hover:border-blue-400 flex items-center justify-center text-[11px] font-bold leading-none transition-colors shrink-0"
+            title="Como o engajamento e calculado"
+          >
+            ?
+          </button>
+        </div>
       </div>
 
-      {/* Indicadores */}
+      {showHelp && (
+        <div className="px-5 py-4 bg-blue-50 border-b border-blue-100 text-xs text-gray-700 space-y-2">
+          <p className="font-semibold text-gray-800">Como o engajamento e calculado?</p>
+          <p>O score (0–100) combina tres dimensoes dos ultimos 30 dias:</p>
+          <ul className="space-y-1.5 ml-1">
+            <li><span className="font-semibold">Frequencia (40%)</span> — dias distintos com atividade. 15+ dias = pontuacao maxima.</li>
+            <li><span className="font-semibold">Producao (40%)</span> — soma ponderada de acoes: leitura concluida (8 pts), marco criado (6), leitura adicionada (5), nota criada (3), edicoes (1). Maximo de 40 pontos.</li>
+            <li><span className="font-semibold">Recencia (20%)</span> — ultima acao produtiva: hoje (20 pts), 1–3 dias (15), 4–7 dias (10), 8–14 dias (5), 15+ dias (0).</li>
+          </ul>
+          <div className="flex items-center gap-3 pt-1 text-[11px] text-gray-500">
+            <span className="flex items-center gap-1"><span className="w-2 h-3 rounded-sm bg-green-500 inline-block" /> 70–100 Ativo</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-3 rounded-sm bg-blue-500 inline-block" /> 45–69 Regular</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-3 rounded-sm bg-amber-500 inline-block" /> 20–44 Pouco ativo</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-3 rounded-sm bg-red-500 inline-block" /> 1–19 Inativo</span>
+          </div>
+        </div>
+      )}
+
+      {/* Indicadores (totais do banco) */}
       <div className="px-5 py-4 grid grid-cols-4 gap-4 border-b border-gray-100">
         <Indicator
           label="Leituras"
           value={dbStats?.readings ?? stats.readings}
-          sublabel={stats.readingsCompleted > 0 ? `${stats.readingsCompleted} concluida${stats.readingsCompleted > 1 ? 's' : ''}` : null}
+          sublabel={stats.readingsCompleted > 0 ? `${stats.readingsCompleted} concluida${stats.readingsCompleted > 1 ? 's' : ''}` : 'total'}
           color="text-blue-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -254,6 +294,7 @@ export default function ActivitySummary({ userId, userName }) {
         <Indicator
           label="Marcos"
           value={dbStats?.milestones ?? stats.milestones}
+          sublabel="total"
           color="text-green-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -262,8 +303,9 @@ export default function ActivitySummary({ userId, userName }) {
           }
         />
         <Indicator
-          label="Notas"
+          label="Anotacoes"
           value={dbStats?.notes ?? stats.notes}
+          sublabel="total"
           color="text-purple-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,6 +316,7 @@ export default function ActivitySummary({ userId, userName }) {
         <Indicator
           label="Acessos"
           value={dbStats?.logins ?? stats.logins}
+          sublabel="total"
           color="text-amber-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -291,7 +334,7 @@ export default function ActivitySummary({ userId, userName }) {
       ) : (
         <>
           <div className="divide-y divide-gray-50">
-            {displayEvents.map(event => (
+            {nonLoginEvents.map(event => (
               <div key={event.id} className="flex items-start gap-2.5 px-5 py-2.5 hover:bg-gray-50/50 transition-colors">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${ACTION_COLORS[event.action] || 'bg-gray-100 text-gray-500'}`}>
                   {ACTION_ICONS[event.action] || null}
@@ -312,17 +355,15 @@ export default function ActivitySummary({ userId, userName }) {
             ))}
           </div>
 
-          {/* Expandir / recolher */}
-          {nonLoginEvents.length > 5 && (
+          {hasMore && (
             <div className="border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => setExpanded(prev => !prev)}
-                className="w-full px-5 py-2.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50/50 transition-colors text-center font-medium"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full px-5 py-2.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50/50 transition-colors text-center font-medium disabled:opacity-50"
               >
-                {expanded
-                  ? 'Mostrar menos'
-                  : `Ver mais ${Math.min(nonLoginEvents.length, 30) - 5} eventos`}
+                {loadingMore ? 'Carregando...' : 'Ver mais'}
               </button>
             </div>
           )}
