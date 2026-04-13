@@ -37,7 +37,7 @@ function getPredictedEnd(researcher) {
 
 // ── Modal ────────────────────────────────────────────────────────────────────
 
-function MilestoneModal({ initial, onSave, onClose }) {
+function MilestoneModal({ initial, onSave, onClose, minDate }) {
   // Opções do select: inclui o tipo atual mesmo que seja 'entrada'
   const modalTypeOptions = initial?.type && !(TYPE_OPTIONS.find(o => o.value === initial.type))
     ? [{ value: initial.type, label: TYPE_CONFIG[initial.type]?.label ?? initial.type, emoji: TYPE_CONFIG[initial.type]?.emoji ?? '' }, ...TYPE_OPTIONS]
@@ -63,12 +63,13 @@ function MilestoneModal({ initial, onSave, onClose }) {
     e.preventDefault();
     if (!form.title.trim()) { setError('Título obrigatório'); return; }
     if (!form.date)          { setError('Data obrigatória');  return; }
+    if (minDate && form.date < minDate) { setError('Data não pode ser anterior à entrada no Alumnus'); return; }
     setSaving(true);
     try {
       await onSave({ ...form, title: form.title.trim() });
       onClose();
-    } catch {
-      setError('Erro ao salvar marco');
+    } catch (err) {
+      setError(err?.message || 'Erro ao salvar marco');
       setSaving(false);
     }
   }
@@ -116,6 +117,7 @@ function MilestoneModal({ initial, onSave, onClose }) {
             <input
               type="date"
               value={form.date}
+              min={minDate || undefined}
               onChange={e => set('date', e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
@@ -246,6 +248,8 @@ export default function MilestoneTimeline({ userId, researcher, canEdit, preview
     });
   }
 
+  const entradaMilestone = milestones.find(m => m.type === 'entrada');
+  const entradaDate = entradaMilestone ? isoToDate(entradaMilestone.date) : null;
   const today    = new Date().toISOString().slice(0, 10);
   const allItems = [...autoItems, ...milestones].sort((a, b) => a.date.localeCompare(b.date));
 
@@ -398,6 +402,7 @@ export default function MilestoneTimeline({ userId, researcher, canEdit, preview
           initial={editing}
           onSave={handleSave}
           onClose={() => { setModalOpen(false); setEditing(null); }}
+          minDate={entradaDate}
         />
       )}
     </section>

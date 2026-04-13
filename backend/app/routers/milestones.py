@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import User
+from ..models import Milestone, User
 from ..schemas import MilestoneCreate, MilestoneOut, MilestoneUpdate
 from ..services import milestone_service
 from ..services.user_service import get_by_id as get_user_by_id
@@ -28,6 +28,22 @@ def _check_can_edit(current_user: User, user_id: int):
         raise HTTPException(status_code=403, detail="Sem permissão para editar marcos deste usuário")
 
 
+def _check_date_after_entrada(db: Session, user_id: int, new_date):
+    """Rejeita datas anteriores ao milestone de entrada no Alumnus."""
+    if new_date is None:
+        return
+    entrada = (
+        db.query(Milestone)
+        .filter(Milestone.user_id == user_id, Milestone.type == "entrada")
+        .first()
+    )
+    if entrada and new_date < entrada.date:
+        raise HTTPException(
+            status_code=422,
+            detail="A data não pode ser anterior à entrada no Alumnus",
+        )
+
+
 @router.get("/", response_model=list[MilestoneOut])
 def list_milestones(
     user_id: int,
@@ -47,6 +63,7 @@ def create_milestone(
 ):
     _get_user_or_404(user_id, db)
     _check_can_edit(current_user, user_id)
+    _check_date_after_entrada(db, user_id, data.date)
     return milestone_service.create(db, user_id, data, current_user.id)
 
 
@@ -63,6 +80,7 @@ def update_milestone(
     milestone = milestone_service.get_by_id(db, milestone_id)
     if not milestone or milestone.user_id != user_id:
         raise HTTPException(status_code=404, detail="Marco não encontrado")
+    _check_date_after_entrada(db, user_id, data.date)
     return milestone_service.update(db, milestone, data)
 
 

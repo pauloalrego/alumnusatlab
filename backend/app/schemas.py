@@ -1,3 +1,4 @@
+import datetime as _dt
 import re
 from datetime import datetime, date
 from typing import Optional
@@ -394,6 +395,11 @@ class TipOut(BaseModel):
         return obj
 
 
+class TipUpdate(BaseModel):
+    question: Optional[str] = None
+    answer: Optional[str] = None
+
+
 class TipCommentCreate(BaseModel):
     text: str
 
@@ -453,7 +459,7 @@ class MilestoneCreate(BaseModel):
 class MilestoneUpdate(BaseModel):
     type: Optional[str] = None
     title: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional[_dt.date] = None
     description: Optional[str] = None
 
     @field_validator("type")

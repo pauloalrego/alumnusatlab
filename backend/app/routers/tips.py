@@ -7,6 +7,7 @@ from ..database import get_db
 from ..models import User
 from ..schemas import (
     TipCreate,
+    TipUpdate,
     TipOut,
     TipCommentCreate,
     TipCommentOut,
@@ -46,6 +47,27 @@ def create_tip(
     current_user: User = Depends(get_current_user),
 ):
     entry = tip_service.create_tip(db, data, current_user.id)
+    return TipOut.from_orm_with_context(entry, current_user.id)
+
+
+@router.put("/{entry_id}", response_model=TipOut)
+def update_tip(
+    entry_id: int,
+    data: TipUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    entry = tip_service.get_tip(db, entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    is_author = entry.author_id is not None and entry.author_id == current_user.id
+    if not is_author and not is_privileged(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Só o autor ou um moderador pode editar a entrada",
+        )
+    tip_service.update_tip(db, entry, data)
+    entry = tip_service.get_tip_full(db, entry_id)
     return TipOut.from_orm_with_context(entry, current_user.id)
 
 

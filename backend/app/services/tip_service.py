@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.orm import Session, joinedload
 
 from ..models import TipComment, Tip, TipVote
-from ..schemas import TipCreate
+from ..schemas import TipCreate, TipUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,15 @@ def create_tip(db: Session, data: TipCreate, author_id: int) -> Tip:
     db.commit()
     db.refresh(entry)
     logger.info("Tip criado: id=%s author_id=%s institution_id=%s", entry.id, author_id, data.institution_id)
+    return entry
+
+
+def update_tip(db: Session, entry: Tip, data: TipUpdate) -> Tip:
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(entry, key, value)
+    db.commit()
+    db.refresh(entry)
+    logger.info("Tip atualizado: id=%s", entry.id)
     return entry
 
 

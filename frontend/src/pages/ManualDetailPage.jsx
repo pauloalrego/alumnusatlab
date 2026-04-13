@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { modKey, isModEnter } from '../platform';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getTip, deleteTip,
+  getTip, updateTip, deleteTip,
   toggleTipVote, addTipComment, deleteTipComment,
+  uploadImage,
 } from '../api';
 import { getTokenPayload, isDashboardRole } from '../auth';
 import { useAppLayout } from '../components/AppLayout';
@@ -12,6 +13,7 @@ import { keys } from '../queryKeys';
 import Toast from '../components/Toast';
 import { useConfirm } from '../components/ConfirmModal';
 import RichContent from '../components/RichContent';
+import RichEditor from '../components/RichEditor';
 import { slugify } from '../mentionUtils.jsx';
 
 function sameUser(a, b) {
@@ -25,10 +27,14 @@ function formatDate(iso) {
 
 export default function ManualDetailPage() {
   const { id } = useParams();
-  const { currentInstitution } = useAppLayout();
+  const { currentInstitution, researchers = [] } = useAppLayout();
   const [toast, setToast] = useState('');
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editQuestion, setEditQuestion] = useState('');
+  const [editAnswer, setEditAnswer] = useState('');
+  const [saving, setSaving] = useState(false);
   const { confirm, modal: confirmModal } = useConfirm();
   const payload = getTokenPayload();
   const canModerate = isDashboardRole(payload?.role);
@@ -81,6 +87,28 @@ export default function ManualDetailPage() {
     invalidate();
   }
 
+  function startEditing() {
+    setEditQuestion(entry.question);
+    setEditAnswer(entry.answer);
+    setEditing(true);
+  }
+
+  async function handleSaveEdit(e) {
+    e?.preventDefault();
+    if (!editQuestion.trim() || !editAnswer.trim()) return;
+    setSaving(true);
+    try {
+      await updateTip(id, { question: editQuestion.trim(), answer: editAnswer.trim() });
+      setEditing(false);
+      setToast('Entrada atualizada');
+      invalidate();
+    } catch (err) {
+      setToast(err?.message || 'Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-full bg-gray-50">
@@ -103,6 +131,7 @@ export default function ManualDetailPage() {
   }
 
   const canDeleteEntry = sameUser(entry.author_id, authUserId) || canModerate;
+  const canEdit = canDeleteEntry;
 
   return (
     <div className="min-h-full bg-gray-50">
@@ -146,37 +175,91 @@ export default function ManualDetailPage() {
 
               {/* Conteudo */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <h1 className="text-lg font-bold text-gray-900 leading-snug">{entry.question}</h1>
-                  {canDeleteEntry && (
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      className="shrink-0 p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      title="Remover entrada"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                {editing ? (
+                  <form onSubmit={handleSaveEdit} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Pergunta</label>
+                      <input
+                        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        value={editQuestion}
+                        onChange={e => setEditQuestion(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Resposta</label>
+                      <RichEditor
+                        variant="full"
+                        researchers={researchers}
+                        value={editAnswer}
+                        onChange={setEditAnswer}
+                        onSubmit={handleSaveEdit}
+                        placeholder="Resposta..."
+                        uploadImage={uploadImage}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => setEditing(false)} className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800">
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving || !editQuestion.trim() || !editAnswer.trim()}
+                        className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {saving ? 'Salvando...' : 'Salvar'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <h1 className="text-lg font-bold text-gray-900 leading-snug">{entry.question}</h1>
+                      <div className="flex gap-1 shrink-0">
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={startEditing}
+                            className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Editar entrada"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.5-6.5a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-3 1 1-3a4 4 0 01.828-1.414z" />
+                            </svg>
+                          </button>
+                        )}
+                        {canDeleteEntry && (
+                          <button
+                            type="button"
+                            onClick={handleDelete}
+                            className="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Remover entrada"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-                <p className="text-xs text-gray-500 mt-1.5">
-                  {entry.author_name ? (
-                    <>Por <Link to={`/app/profile/${slugify(entry.author_name)}`} className="font-medium text-gray-700 hover:text-blue-600 hover:underline">{entry.author_name}</Link></>
-                  ) : (
-                    <span className="italic">Autor desconhecido</span>
-                  )}
-                  {entry.created_at && (
-                    <span className="text-gray-400"> &middot; {formatDate(entry.created_at)}</span>
-                  )}
-                </p>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      {entry.author_name ? (
+                        <>Por <Link to={`/app/profile/${slugify(entry.author_name)}`} className="font-medium text-gray-700 hover:text-blue-600 hover:underline">{entry.author_name}</Link></>
+                      ) : (
+                        <span className="italic">Autor desconhecido</span>
+                      )}
+                      {entry.created_at && (
+                        <span className="text-gray-400"> &middot; {formatDate(entry.created_at)}</span>
+                      )}
+                    </p>
 
-                {/* Resposta */}
-                <div className="mt-4 rounded-lg bg-gray-50 border border-gray-100 px-4 py-4">
-                  <RichContent html={entry.answer} className="text-sm text-gray-800 leading-relaxed" />
-                </div>
+                    {/* Resposta */}
+                    <div className="mt-4 rounded-lg bg-gray-50 border border-gray-100 px-4 py-4">
+                      <RichContent html={entry.answer} className="text-sm text-gray-800 leading-relaxed" />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -27,6 +27,17 @@ async function request(path, options = {}) {
     }
     return null;
   }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const detail = typeof body.detail === 'string'
+      ? body.detail
+      : Array.isArray(body.detail)
+        ? body.detail.map(d => d.msg).join('; ')
+        : 'Erro na requisição';
+    const err = new Error(detail);
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
 
@@ -131,6 +142,7 @@ export const getTips = (institutionId) =>
 export const getTip = (id) => request(`/tips/${id}`);
 export const createTip = (data, institutionId) =>
   request('/tips/', { method: 'POST', body: JSON.stringify({ ...data, institution_id: institutionId || null }) });
+export const updateTip = (id, data) => request(`/tips/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTip = (id) => request(`/tips/${id}`, { method: 'DELETE' });
 export const toggleTipVote = (entryId) => request(`/tips/${entryId}/vote`, { method: 'POST' });
 export const addTipComment = (entryId, text) => request(`/tips/${entryId}/comments`, { method: 'POST', body: JSON.stringify({ text }) });
