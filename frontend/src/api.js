@@ -73,8 +73,8 @@ export const getGraph = (institutionId) =>
 export const updateLayout = (positions) => request('/graph/layout', { method: 'PUT', body: JSON.stringify({ positions }) });
 
 // Notes
-export const getNotes = (userId, institutionId) =>
-  request(`/users/${userId}/notes${institutionId ? `?institution_id=${institutionId}` : ''}`);
+export const getNotes = (userId) =>
+  request(`/users/${userId}/notes`);
 export const deleteNote = (noteId) => request(`/notes/${noteId}`, { method: 'DELETE' });
 
 export async function updateNote(noteId, text) {
@@ -89,11 +89,10 @@ export async function updateNote(noteId, text) {
   return res.json();
 }
 
-export async function createNote(userId, text, file, institutionId) {
+export async function createNote(userId, text, file) {
   const form = new FormData();
   form.append('text', text);
   if (file) form.append('file', file);
-  if (institutionId != null) form.append('institution_id', institutionId);
   const token = getToken();
   const res = await fetch(`/api/users/${userId}/notes`, {
     method: 'POST',
@@ -213,6 +212,7 @@ export const inviteProfessor = (data) => request('/admin/invite-professor', { me
 // Activity
 export const getMyResearchersActivity = (limit = 100) => request(`/activity/my-researchers?limit=${limit}`);
 export const getUserActivity = (userId, limit = 50) => request(`/activity/user/${userId}?limit=${limit}`);
+export const getUserStats = (userId) => request(`/activity/user/${userId}/stats`);
 
 // Milestones
 export const getMilestones      = (userId) => request(`/users/${userId}/milestones/`);

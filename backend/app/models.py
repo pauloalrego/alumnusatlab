@@ -227,7 +227,6 @@ class Note(Base):
 
     id             = Column(Integer, primary_key=True, index=True)
     user_id        = Column(Integer, ForeignKey("users.id"), nullable=False)
-    institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
     text           = Column(Text, nullable=False)
     file_url       = Column(String(500), nullable=True)
     file_name      = Column(String(255), nullable=True)

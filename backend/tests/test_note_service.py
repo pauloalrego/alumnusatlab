@@ -58,20 +58,6 @@ class TestCreate:
         assert note.file_url == "/files/1"
         assert note.file_name == "doc.pdf"
 
-    def test_creates_note_with_institution(self, db):
-        user = make_user(db, "instuser@test.br")
-        inst = make_institution(db)
-        note = note_service.create(
-            db,
-            user_id=user.id,
-            text="Com inst",
-            file_url=None,
-            file_name=None,
-            created_by_id=user.id,
-            institution_id=inst.id,
-        )
-        assert note.institution_id == inst.id
-
 
 class TestListByUser:
     def test_returns_notes_for_user(self, db):
@@ -87,15 +73,6 @@ class TestListByUser:
         note_service.create(db, user_id=user1.id, text="User1 Note", file_url=None, file_name=None, created_by_id=user1.id)
         notes = note_service.list_by_user(db, user2.id)
         assert len(notes) == 0
-
-    def test_filters_by_institution(self, db):
-        user = make_user(db, "inst@test.br")
-        inst = make_institution(db, "FILTER_INST", "filterinst.br")
-        note_service.create(db, user_id=user.id, text="Com inst", file_url=None, file_name=None, created_by_id=user.id, institution_id=inst.id)
-        note_service.create(db, user_id=user.id, text="Sem inst", file_url=None, file_name=None, created_by_id=user.id)
-        notes = note_service.list_by_user(db, user.id, institution_id=inst.id)
-        assert len(notes) == 1
-        assert notes[0].text == "Com inst"
 
     def test_ordered_by_created_at_desc(self, db):
         user = make_user(db, "ord@test.br")

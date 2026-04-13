@@ -47,6 +47,8 @@ export default function RichContent({ html = '', researchers = [], className = '
     }
 
     function handler(e) {
+      // Let native <a> clicks proceed normally (e.g. linkified URLs)
+      if (e.target.closest('a')) return;
       const el = e.target.closest('[data-type="mention"]');
       if (el) {
         const id = el.getAttribute('data-id');

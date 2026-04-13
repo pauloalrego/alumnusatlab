@@ -9,11 +9,8 @@ from ..services import activity_service
 logger = logging.getLogger(__name__)
 
 
-def list_by_user(db: Session, user_id: int, institution_id: int | None = None) -> list[Note]:
-    q = db.query(Note).filter(Note.user_id == user_id)
-    if institution_id is not None:
-        q = q.filter(Note.institution_id == institution_id)
-    return q.order_by(Note.created_at.desc()).all()
+def list_by_user(db: Session, user_id: int) -> list[Note]:
+    return db.query(Note).filter(Note.user_id == user_id).order_by(Note.created_at.desc()).all()
 
 
 def create(
@@ -23,11 +20,9 @@ def create(
     file_url: Optional[str],
     file_name: Optional[str],
     created_by_id: Optional[int],
-    institution_id: Optional[int] = None,
 ) -> Note:
     note = Note(
         user_id=user_id,
-        institution_id=institution_id,
         text=text,
         file_url=file_url,
         file_name=file_name,

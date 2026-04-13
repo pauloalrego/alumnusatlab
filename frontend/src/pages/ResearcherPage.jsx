@@ -813,9 +813,7 @@ export default function ResearcherPage() {
         )}
         {researcherUser && (
           <NotesSection
-            key={`notes-${currentInstitution?.id ?? 'none'}`}
             userId={researcherUser.id}
-            institutionId={currentInstitution?.id ?? null}
             canAdd={isProfessor || isOwnProfile}
             isProfessor={isProfessor}
             currentUserId={payload?.sub != null ? Number(payload.sub) : null}

@@ -1,11 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_professor, get_current_user
-from ..models import Researcher, User
+from ..models import ActivityEvent, Milestone, Note, Reading, Researcher, User
 from ..schemas import ActivityEventOut
 from ..services import activity_service
 
@@ -55,3 +56,30 @@ def list_user_activity(
         raise HTTPException(status_code=403, detail="Sem permissao")
     events = activity_service.list_by_target_user(db, user_id, limit)
     return [ActivityEventOut.from_orm_with_names(e) for e in events]
+
+
+@router.get("/user/{user_id}/stats")
+def get_user_stats(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_own = current_user.id == user_id
+    if not is_own and current_user.role not in ("professor", "superadmin"):
+        raise HTTPException(status_code=403, detail="Sem permissao")
+
+    readings = db.query(func.count()).filter(Reading.user_id == user_id).scalar()
+    milestones = db.query(func.count()).filter(Milestone.user_id == user_id).scalar()
+    notes = db.query(func.count()).filter(Note.user_id == user_id).scalar()
+    logins = (
+        db.query(func.count())
+        .filter(ActivityEvent.target_user_id == user_id, ActivityEvent.action == "login")
+        .scalar()
+    )
+
+    return {
+        "readings": readings,
+        "milestones": milestones,
+        "notes": notes,
+        "logins": logins,
+    }

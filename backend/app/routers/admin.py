@@ -174,8 +174,9 @@ def _stats_global(db: Session, hide_superadmin_count: bool, current: User = None
             total_tips = db.query(func.count(Tip.id)).filter(
                 Tip.institution_id.in_(institution_ids)
             ).scalar()
+            visible_user_ids = [uid for uid, _ in visible_users]
             total_notes = db.query(func.count(Note.id)).filter(
-                Note.institution_id.in_(institution_ids)
+                Note.user_id.in_(visible_user_ids)
             ).scalar()
 
     return {

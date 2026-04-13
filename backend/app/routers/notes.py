@@ -1,7 +1,6 @@
 import logging
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -17,20 +16,18 @@ router = APIRouter(tags=["notes"])
 @router.get("/users/{user_id}/notes", response_model=list[NoteOut])
 def list_notes(
     user_id: int,
-    institution_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role not in ("professor", "admin", "superadmin") and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Sem permissão")
-    notes = note_service.list_by_user(db, user_id, institution_id)
+    notes = note_service.list_by_user(db, user_id)
     return [NoteOut.from_orm_with_creator(n) for n in notes]
 
 
 @router.post("/users/{user_id}/notes", response_model=NoteOut, status_code=201)
 async def create_note(
     user_id: int,
-    institution_id: Optional[int] = Form(None),
     text: str = Form(...),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
@@ -50,7 +47,6 @@ async def create_note(
         file_url=file_url,
         file_name=file_name,
         created_by_id=current_user.id,
-        institution_id=institution_id,
     )
     return NoteOut.from_orm_with_creator(note)
 

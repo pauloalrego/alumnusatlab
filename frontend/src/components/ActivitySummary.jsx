@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { getUserActivity } from '../api';
+import { getUserActivity, getUserStats } from '../api';
 import { slugify } from '../mentionUtils.jsx';
 
 /* ── Constantes ─────────────────────────────────────────────────────────────── */
@@ -197,6 +197,13 @@ export default function ActivitySummary({ userId, userName }) {
     enabled: !!userId,
   });
 
+  const { data: dbStats } = useQuery({
+    queryKey: ['activity', 'user', userId, 'stats'],
+    queryFn: () => getUserStats(userId),
+    staleTime: 30_000,
+    enabled: !!userId,
+  });
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4">
@@ -235,7 +242,7 @@ export default function ActivitySummary({ userId, userName }) {
       <div className="px-5 py-4 grid grid-cols-4 gap-4 border-b border-gray-100">
         <Indicator
           label="Leituras"
-          value={stats.readings}
+          value={dbStats?.readings ?? stats.readings}
           sublabel={stats.readingsCompleted > 0 ? `${stats.readingsCompleted} concluida${stats.readingsCompleted > 1 ? 's' : ''}` : null}
           color="text-blue-600"
           icon={
@@ -246,7 +253,7 @@ export default function ActivitySummary({ userId, userName }) {
         />
         <Indicator
           label="Marcos"
-          value={stats.milestones}
+          value={dbStats?.milestones ?? stats.milestones}
           color="text-green-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,7 +263,7 @@ export default function ActivitySummary({ userId, userName }) {
         />
         <Indicator
           label="Notas"
-          value={stats.notes}
+          value={dbStats?.notes ?? stats.notes}
           color="text-purple-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -266,7 +273,7 @@ export default function ActivitySummary({ userId, userName }) {
         />
         <Indicator
           label="Acessos"
-          value={stats.logins}
+          value={dbStats?.logins ?? stats.logins}
           color="text-amber-600"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -60,9 +60,7 @@ export default function NotesPage() {
         </div>
         {profile?.user && (
           <NotesSection
-            key={`notes-${instId}`}
             userId={profile.user.id}
-            institutionId={instId}
             canAdd={canAdd}
             isProfessor={isProfessor}
             currentUserId={currentUserId}

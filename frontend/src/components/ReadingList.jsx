@@ -186,9 +186,9 @@ export default function ReadingList({ userId, canEdit, slug, preview = false }) 
 
       <div className="px-6 py-4 border-b flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800">📚 Leituras</h2>
-        {slug && readings.length > 1 && (
+        {slug && (
           <Link to={`/app/profile/${slug}/readings`} className="text-sm text-blue-600 hover:underline">
-            Ver todos →
+            {readings.length > 0 ? 'Ver todos →' : 'Adicionar →'}
           </Link>
         )}
       </div>

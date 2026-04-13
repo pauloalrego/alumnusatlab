@@ -108,7 +108,6 @@ CREATE TABLE users (
 CREATE TABLE notes (
     id             SERIAL PRIMARY KEY,
     user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    institution_id INTEGER REFERENCES institutions(id) ON DELETE SET NULL,
     text           TEXT NOT NULL,
     file_url       VARCHAR(500),
     file_name      VARCHAR(255),

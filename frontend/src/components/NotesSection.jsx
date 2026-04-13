@@ -12,7 +12,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export default function NotesSection({ userId, institutionId, canAdd, isProfessor, currentUserId, researchers = [], preview = false, slug, alwaysOpen = false }) {
+export default function NotesSection({ userId, canAdd, isProfessor, currentUserId, researchers = [], preview = false, slug, alwaysOpen = false }) {
   const [open, setOpen] = useState(preview || alwaysOpen);
   const [notes, setNotes] = useState([]);
   const [text, setText] = useState('');
@@ -31,14 +31,14 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
     if (loadNotesInFlight.current) return;
     loadNotesInFlight.current = true;
     try {
-      const data = await getNotes(userId, institutionId);
+      const data = await getNotes(userId);
       setNotes(Array.isArray(data) ? data : []);
     } finally {
       loadNotesInFlight.current = false;
     }
   }
 
-  useEffect(() => { loaded.current = false; setNotes([]); }, [userId, institutionId]);
+  useEffect(() => { loaded.current = false; setNotes([]); }, [userId]);
 
   useEffect(() => {
     if (preview) { loaded.current = true; load(); return; }
@@ -49,7 +49,7 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
     if (e && e.preventDefault) e.preventDefault();
     if (!text.trim()) return;
     setSaving(true);
-    await createNote(userId, text, file, institutionId);
+    await createNote(userId, text, file);
     setText('');
     setFile(null);
     if (fileRef.current) fileRef.current.value = '';
@@ -95,9 +95,9 @@ export default function NotesSection({ userId, institutionId, canAdd, isProfesso
         <section className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div className="px-6 py-4 border-b flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-800">📝 Anotações</h2>
-            {slug && notes.length > 0 && (
+            {slug && (
               <Link to={`/app/profile/${slug}/notes`} className="text-sm text-blue-600 hover:underline">
-                Ver todas →
+                {notes.length > 0 ? 'Ver todas →' : 'Adicionar →'}
               </Link>
             )}
           </div>
