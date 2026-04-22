@@ -795,6 +795,17 @@ export default function ResearcherPage() {
           <ActivitySummary userId={researcherUser.id} userName={researcherUser.nome} />
         )}
         {researcherUser && (
+          <NotesSection
+            userId={researcherUser.id}
+            canAdd={isProfessor || isOwnProfile}
+            isProfessor={isProfessor}
+            currentUserId={payload?.sub != null ? Number(payload.sub) : null}
+            researchers={researchers}
+            preview
+            slug={slug}
+          />
+        )}
+        {researcherUser && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ReadingList
               userId={researcherUser.id}
@@ -810,17 +821,6 @@ export default function ResearcherPage() {
               slug={slug}
             />
           </div>
-        )}
-        {researcherUser && (
-          <NotesSection
-            userId={researcherUser.id}
-            canAdd={isProfessor || isOwnProfile}
-            isProfessor={isProfessor}
-            currentUserId={payload?.sub != null ? Number(payload.sub) : null}
-            researchers={researchers}
-            preview
-            slug={slug}
-          />
         )}
       </main>
     </div>

@@ -95,13 +95,33 @@ export default function NotesSection({ userId, canAdd, isProfessor, currentUserI
         <section className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div className="px-6 py-4 border-b flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-800">📝 Anotações</h2>
-            {slug && (
+            {slug && notes.length > 0 && (
               <Link to={`/app/profile/${slug}/notes`} className="text-sm text-blue-600 hover:underline">
-                {notes.length > 0 ? 'Ver todas →' : 'Adicionar →'}
+                Ver todas →
               </Link>
             )}
           </div>
-          <div className="px-6 py-4">
+          <div className="px-6 py-4 space-y-4">
+            {canAdd && (
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <input
+                  type="text"
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e); }}
+                  placeholder="Nova anotação..."
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
+                  disabled={saving}
+                />
+                <button
+                  type="submit"
+                  disabled={saving || !text.trim()}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 shrink-0"
+                >
+                  {saving ? '...' : 'Adicionar'}
+                </button>
+              </form>
+            )}
             {visibleNotes.length === 0 && loaded.current ? (
               <p className="text-xs text-gray-400">Nenhuma anotação ainda.</p>
             ) : (
