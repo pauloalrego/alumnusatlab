@@ -226,7 +226,7 @@ export default function AppLayout() {
         status: 'professor',
         ativo: true,
         _isProfessor: true,
-        email: null,
+        email: n.data.email || null,
         group_id: null,
         orientador_id: null,
         photo_url: n.data.photoUrl || null,

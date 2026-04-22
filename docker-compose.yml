@@ -25,6 +25,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-512}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      APP_URL: ${APP_URL:-https://alumnus.app}
     ports:
       - "${BACKEND_PORT}:8000"
     volumes:

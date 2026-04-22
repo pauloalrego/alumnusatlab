@@ -77,6 +77,7 @@ def build_graph_payload(db: Session, institution_id: int | None = None) -> dict:
             "data": {
                 "name":       p.nome,
                 "slug":       slugify(p.nome),
+                "email":      p.user.email if p.user else None,
                 "photoUrl":   p.user.photo_url if p.user else None,
                 "status":     "professor",
                 "color":      STATUS_COLORS["professor"],

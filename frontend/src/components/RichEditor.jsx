@@ -7,6 +7,21 @@ import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import { slugify } from '../mentionUtils.jsx';
 
+const TODOS_ITEM = { id: 'todos', nome: 'Todos do grupo', email: null };
+
+const MentionWithEmail = Mention.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      email: {
+        default: null,
+        parseHTML: el => el.getAttribute('data-email') || null,
+        renderHTML: attrs => attrs.email ? { 'data-email': attrs.email } : {},
+      },
+    };
+  },
+});
+
 export default function RichEditor({
   variant = 'simple',
   researchers = [],
@@ -34,17 +49,21 @@ export default function RichEditor({
       Underline,
       ...(variant === 'full' ? [Image.configure({ inline: true, allowBase64: false })] : []),
       Placeholder.configure({ placeholder }),
-      Mention.configure({
+      MentionWithEmail.configure({
         HTMLAttributes: { class: 'mention' },
         renderLabel: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
         suggestion: {
-          items: ({ query }) =>
-            researchersRef.current
+          items: ({ query }) => {
+            const q = query.toLowerCase();
+            const showTodos = !q || 'todos'.startsWith(q) || 'todos do grupo'.startsWith(q);
+            const researchers = researchersRef.current
               .filter(r =>
-                r.nome.toLowerCase().includes(query.toLowerCase()) ||
-                slugify(r.nome).includes(query.toLowerCase()),
+                r.nome.toLowerCase().includes(q) ||
+                slugify(r.nome).includes(q),
               )
-              .slice(0, 6),
+              .slice(0, 6);
+            return showTodos ? [TODOS_ITEM, ...researchers].slice(0, 7) : researchers;
+          },
           render: () => ({
             onStart(props) {
               suggestionRef.current = { ...props, activeIndex: 0 };
@@ -78,7 +97,7 @@ export default function RichEditor({
               if (event.key === 'Enter') {
                 const item = s.items[s.activeIndex];
                 if (item) {
-                  s.command({ id: slugify(item.nome), label: item.nome });
+                  s.command({ id: item.id ?? slugify(item.nome), label: item.nome, email: item.email ?? null });
                   suggestionRef.current = null;
                   setSuggestion(null);
                 }
@@ -227,7 +246,7 @@ export default function RichEditor({
           onSelect={item => {
             const s = suggestionRef.current;
             if (s) {
-              s.command({ id: slugify(item.nome), label: item.nome });
+              s.command({ id: item.id ?? slugify(item.nome), label: item.nome, email: item.email ?? null });
               suggestionRef.current = null;
             }
             setSuggestion(null);

@@ -52,7 +52,7 @@ export default function RichContent({ html = '', researchers = [], className = '
       const el = e.target.closest('[data-type="mention"]');
       if (el) {
         const id = el.getAttribute('data-id');
-        if (id) navigate(`/app/profile/${id}`);
+        if (id && id !== 'todos') navigate(`/app/profile/${id}`);
       }
     }
     const nodeEl = ref.current;
