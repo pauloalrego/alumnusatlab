@@ -17,7 +17,7 @@ from ..services import auth_service
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-EXPIRE_H = int(os.getenv("TOKEN_EXPIRE_HOURS", "8"))
+EXPIRE_H = int(os.getenv("TOKEN_EXPIRE_HOURS", "168"))
 
 
 def make_token(user: User) -> str:
