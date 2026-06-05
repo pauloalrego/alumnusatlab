@@ -43,7 +43,7 @@ def main():
                 email=args.email,
                 nome=args.nome,
                 password_hash=pwd_ctx.hash(args.password),
-                role="admin",
+                role="superadmin",
                 researcher_id=None,
             )
             db.add(user)

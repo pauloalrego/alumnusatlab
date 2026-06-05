@@ -12,14 +12,22 @@ CREATE TABLE IF NOT EXISTS user_plans (
     UNIQUE (user_id)
 );
 
--- Migra dados existentes
-INSERT INTO user_plans (user_id, plan_type, plan_status, account_activated_at, plan_period_ends_at)
-SELECT id, plan_type, plan_status, account_activated_at, plan_period_ends_at
-FROM users
-WHERE plan_type IS NOT NULL OR plan_status IS NOT NULL
-   OR account_activated_at IS NOT NULL OR plan_period_ends_at IS NOT NULL;
+-- Migra dados existentes (só se as colunas ainda existirem em users)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'plan_type'
+    ) THEN
+        INSERT INTO user_plans (user_id, plan_type, plan_status, account_activated_at, plan_period_ends_at)
+        SELECT id, plan_type, plan_status, account_activated_at, plan_period_ends_at
+        FROM users
+        WHERE plan_type IS NOT NULL OR plan_status IS NOT NULL
+           OR account_activated_at IS NOT NULL OR plan_period_ends_at IS NOT NULL;
 
-ALTER TABLE users DROP COLUMN IF EXISTS plan_type;
-ALTER TABLE users DROP COLUMN IF EXISTS plan_status;
-ALTER TABLE users DROP COLUMN IF EXISTS account_activated_at;
-ALTER TABLE users DROP COLUMN IF EXISTS plan_period_ends_at;
+        ALTER TABLE users DROP COLUMN IF EXISTS plan_type;
+        ALTER TABLE users DROP COLUMN IF EXISTS plan_status;
+        ALTER TABLE users DROP COLUMN IF EXISTS account_activated_at;
+        ALTER TABLE users DROP COLUMN IF EXISTS plan_period_ends_at;
+    END IF;
+END $$;

@@ -194,7 +194,6 @@ export default function LandingPage() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-500 font-medium">
             <a href="#funcionalidades" className="hover:text-gray-900 transition-colors">Funcionalidades</a>
-            <a href="#pricing" className="hover:text-gray-900 transition-colors">Preços</a>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -206,14 +205,9 @@ export default function LandingPage() {
                 </Link>
               </>
             ) : (
-              <>
-                <button type="button" onClick={() => openModal('entrar')} className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors px-4 py-2">
-                  Entrar
-                </button>
-                <button type="button" onClick={() => openModal('cadastro')} className="text-sm bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition-colors font-semibold">
-                  Criar conta grátis
-                </button>
-              </>
+              <button type="button" onClick={() => openModal('entrar')} className="text-sm bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition-colors font-semibold">
+                Entrar
+              </button>
             )}
           </div>
 
@@ -227,15 +221,11 @@ export default function LandingPage() {
         {menuOpen && (
           <div className="md:hidden border-t bg-white px-6 py-4 space-y-1 text-sm">
             <a href="#funcionalidades" className="block py-2 text-gray-600 hover:text-gray-900" onClick={() => setMenuOpen(false)}>Funcionalidades</a>
-            <a href="#pricing" className="block py-2 text-gray-600 hover:text-gray-900" onClick={() => setMenuOpen(false)}>Preços</a>
-            <div className="pt-3 border-t mt-2 flex flex-col gap-2">
+            <div className="pt-3 border-t mt-2">
               {isLoggedIn ? (
                 <Link to="/app" className="block text-center py-2.5 bg-blue-600 text-white rounded-full font-semibold">Acessar plataforma</Link>
               ) : (
-                <>
-                  <button type="button" onClick={() => { setMenuOpen(false); openModal('entrar'); }} className="block w-full text-center py-2.5 border border-gray-300 rounded-full text-gray-700 font-medium">Entrar</button>
-                  <button type="button" onClick={() => { setMenuOpen(false); openModal('cadastro'); }} className="block w-full text-center py-2.5 bg-blue-600 text-white rounded-full font-semibold">Criar conta grátis</button>
-                </>
+                <button type="button" onClick={() => { setMenuOpen(false); openModal('entrar'); }} className="block w-full text-center py-2.5 bg-blue-600 text-white rounded-full font-semibold">Entrar</button>
               )}
             </div>
           </div>
@@ -245,10 +235,12 @@ export default function LandingPage() {
       {/* ── HERO ───────────────────────────────────────────────────────── */}
       <section className="py-24 md:py-36 px-6 text-center" style={{ backgroundColor: '#fafaf8' }}>
         <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-1.5 text-sm text-blue-600 font-medium mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            Para grupos de pesquisa acadêmica
+          {/* Badge institucional Alan Turing */}
+          <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-5 py-2 mb-10 shadow-sm">
+            <img src="/alan-turing-logo.png" alt="Laboratório Alan Turing" className="h-6 w-auto" />
+            <span className="text-sm text-gray-600 font-medium">Ferramenta utilizada no <span className="font-semibold text-gray-800">Laboratório Alan Turing — UFC</span></span>
           </div>
+
           <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-8">
             Seu grupo de pesquisa,<br />
             <span className="text-blue-600">em um só lugar.</span>
@@ -262,17 +254,11 @@ export default function LandingPage() {
                 Acessar plataforma →
               </Link>
             ) : (
-              <>
-                <button type="button" onClick={() => openModal('cadastro')} className="bg-blue-600 text-white text-lg font-semibold px-10 py-4 rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                  Começar agora — é grátis
-                </button>
-                <button type="button" onClick={() => openModal('entrar')} className="text-gray-500 hover:text-gray-700 text-base font-medium transition-colors">
-                  Já tenho conta →
-                </button>
-              </>
+              <button type="button" onClick={() => openModal('entrar')} className="bg-blue-600 text-white text-lg font-semibold px-10 py-4 rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
+                Entrar na plataforma →
+              </button>
             )}
           </div>
-          <p className="text-sm text-gray-400 mt-5">30 dias grátis · sem cartão de crédito</p>
         </div>
 
         {/* Hero screenshot placeholder */}
@@ -467,109 +453,24 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRICING ────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-28 px-6 bg-white">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-5">Preços</p>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
-              Todas as funcionalidades.<br />Sempre.
-            </h2>
-            <p className="text-xl text-gray-500">O que muda é só o acesso — trial ou assinatura ativa.</p>
-          </div>
-
-          {/* Funcionalidades incluídas */}
-          <div className="bg-gray-50 rounded-2xl border border-gray-200 p-8 mb-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-6 text-center">Tudo incluso em qualquer plano</p>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {[
-                'Grafo interativo do grupo',
-                'Perfis completos de pesquisadores',
-                'Anotações de reuniões',
-                'Deadlines de conferências',
-                'Lembretes com @menções',
-                'Mural colaborativo',
-                'Manual de sobrevivência',
-                'Dashboard do orientador',
-              ].map(f => (
-                <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                  <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                  {f}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Planos */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Trial */}
-            <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 bg-gray-50">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Trial</p>
-              <div className="mb-1">
-                <span className="text-5xl font-extrabold text-gray-900">Grátis</span>
-              </div>
-              <p className="text-sm text-gray-400 mb-8">30 dias · sem cartão · acesso completo</p>
-              {isLoggedIn
-                ? <Link to="/app" className="block text-center py-3 rounded-full text-sm font-semibold border-2 border-gray-300 text-gray-700 hover:border-gray-400 transition-colors">Acessar plataforma</Link>
-                : <button type="button" onClick={() => openModal('cadastro')} className="w-full py-3 rounded-full text-sm font-semibold border-2 border-gray-300 text-gray-700 hover:border-gray-400 transition-colors">Começar grátis</button>
-              }
-            </div>
-
-            {/* Mensal */}
-            <div className="rounded-2xl border-2 border-gray-200 p-8 bg-white">
-              <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-4">Mensal</p>
-              <div className="flex items-end gap-1 mb-1">
-                <span className="text-2xl text-gray-400 mb-1">R$</span>
-                <span className="text-5xl font-extrabold text-gray-900">20</span>
-                <span className="text-lg text-gray-400 mb-1">/mês</span>
-              </div>
-              <p className="text-sm text-gray-400 mb-8">Acesso enquanto a conta estiver ativa · cancele quando quiser</p>
-              {isLoggedIn
-                ? <Link to="/app" className="block text-center py-3 rounded-full text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">Acessar plataforma</Link>
-                : <button type="button" onClick={() => openModal('cadastro')} className="w-full py-3 rounded-full text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">Assinar mensalmente</button>
-              }
-            </div>
-
-            {/* Anual */}
-            <div className="rounded-2xl border-2 border-blue-600 p-8 bg-blue-600 text-white relative">
-              <span className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-bold bg-white text-blue-600 shadow-sm whitespace-nowrap">
-                Mais popular
-              </span>
-              <p className="text-xs font-bold uppercase tracking-widest text-blue-200 mb-4">Anual</p>
-              <div className="flex items-end gap-1 mb-1">
-                <span className="text-2xl text-blue-200 mb-1">R$</span>
-                <span className="text-5xl font-extrabold">200</span>
-                <span className="text-lg text-blue-200 mb-1">/ano</span>
-              </div>
-              <p className="text-sm text-blue-200 mb-8">R$ 16,67/mês · 2 meses grátis · cancele quando quiser</p>
-              {isLoggedIn
-                ? <Link to="/app" className="block text-center py-3 rounded-full text-sm font-semibold bg-white text-blue-600 hover:bg-blue-50 transition-colors">Acessar plataforma</Link>
-                : <button type="button" onClick={() => openModal('cadastro')} className="w-full py-3 rounded-full text-sm font-semibold bg-white text-blue-600 hover:bg-blue-50 transition-colors">Assinar anualmente</button>
-              }
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── CTA FINAL ──────────────────────────────────────────────────── */}
-      <section className="py-36 px-6" style={{ backgroundColor: '#fafaf8' }}>
+      <section className="py-28 px-6 bg-white">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight mb-8">
-            Pronto para organizar seu grupo?
+          <div className="flex justify-center mb-8">
+            <img src="/alan-turing-logo.png" alt="Laboratório Alan Turing" className="h-12 w-auto opacity-80" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
+            Ferramenta oficial do<br />Laboratório Alan Turing
           </h2>
-          <p className="text-xl text-gray-500 mb-12 leading-relaxed">
-            Comece hoje. 30 dias grátis, sem compromisso.
-          </p>
           {isLoggedIn ? (
-            <Link to="/app" className="inline-block bg-blue-600 text-white text-xl font-semibold px-12 py-5 rounded-full hover:bg-blue-700 transition-colors shadow-xl shadow-blue-200">
+            <Link to="/app" className="inline-block bg-blue-600 text-white text-lg font-semibold px-10 py-4 rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
               Acessar plataforma →
             </Link>
           ) : (
-            <button type="button" onClick={() => openModal('cadastro')} className="bg-blue-600 text-white text-xl font-semibold px-12 py-5 rounded-full hover:bg-blue-700 transition-colors shadow-xl shadow-blue-200">
-              Criar conta grátis →
+            <button type="button" onClick={() => openModal('entrar')} className="bg-blue-600 text-white text-lg font-semibold px-10 py-4 rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
+              Entrar na plataforma →
             </button>
           )}
-          <p className="text-sm text-gray-400 mt-6">Sem cartão de crédito · Cancele quando quiser</p>
         </div>
       </section>
 
@@ -587,28 +488,24 @@ export default function LandingPage() {
                 <span className="font-bold text-white text-lg">Alumnus</span>
               </div>
               <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
-                Gestão de grupos de pesquisa acadêmica através de grafos interativos.
+                Gestão de grupos de pesquisa acadêmica. Ferramenta oficial do Laboratório Alan Turing — UFC.
               </p>
-              <p className="text-gray-600 text-xs mt-4">© {new Date().getFullYear()} Alumnus</p>
+              <p className="text-gray-600 text-xs mt-4">
+                © {new Date().getFullYear()} Alumnus · Desenvolvido por{' '}
+                <a href="https://github.com/gustavopinto" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  Gustavo Pinto
+                </a>
+              </p>
             </div>
             <div className="flex gap-16">
               <div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">Produto</p>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">Plataforma</p>
                 <ul className="space-y-3">
                   <li><a href="#funcionalidades" className="text-gray-500 hover:text-white text-sm transition-colors">Funcionalidades</a></li>
-                  <li><a href="#pricing" className="text-gray-500 hover:text-white text-sm transition-colors">Preços</a></li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">Conta</p>
-                <ul className="space-y-3">
                   {isLoggedIn ? (
                     <li><Link to="/app" className="text-gray-500 hover:text-white text-sm transition-colors">Acessar plataforma</Link></li>
                   ) : (
-                    <>
-                      <li><button type="button" onClick={() => openModal('entrar')} className="text-gray-500 hover:text-white text-sm transition-colors">Entrar</button></li>
-                      <li><button type="button" onClick={() => openModal('cadastro')} className="text-gray-500 hover:text-white text-sm transition-colors">Cadastrar</button></li>
-                    </>
+                    <li><button type="button" onClick={() => openModal('entrar')} className="text-gray-500 hover:text-white text-sm transition-colors">Entrar</button></li>
                   )}
                 </ul>
               </div>

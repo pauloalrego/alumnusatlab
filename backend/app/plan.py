@@ -57,7 +57,7 @@ def ensure_professor_plan_defaults(user: User) -> bool:
     user.plan.plan_type = PLAN_TRIAL
     user.plan.plan_status = STATUS_ACTIVE
     user.plan.account_activated_at = now
-    user.plan.plan_period_ends_at = trial_period_end(now)
+    user.plan.plan_period_ends_at = None
     return True
 
 
